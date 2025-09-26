@@ -54,7 +54,7 @@ run_test() {
         ((TESTS_PASSED++))
         if [ "$test_name" = "Create Test Configuration" ] && [ "$http_code" = "200" ]; then
             # Extract ID for later use
-            CONFIG_ID=$(echo "$body" | grep -o '"id":[0-9]*' | cut -d':' -f2)
+            CONFIG_ID=$(echo "$body" | jq -r '.id')
         fi
     else
         echo -e "${RED}FAIL${NC} (Expected: $expected_status, Got: $http_code)"
