@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS test_results (
   screenshot_path TEXT,
   execution_time_ms INTEGER,
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (session_id) REFERENCES test_sessions(id)
+  FOREIGN KEY (session_id) REFERENCES test_sessions(id) ON DELETE CASCADE
 );
 
 -- Indexes for better performance
