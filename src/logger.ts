@@ -25,7 +25,7 @@ export class Logger {
       action_type: actionType,
       action_data: actionData ? JSON.stringify(actionData) : undefined,
       result: result ? JSON.stringify(result) : undefined,
-      error: error ? (typeof error === 'string' ? error : error.message) : undefined,
+      error: error ? (error instanceof Error ? error.stack : String(error)) : undefined,
       execution_time_ms: executionTimeMs
     };
 
