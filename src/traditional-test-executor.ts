@@ -256,41 +256,24 @@ export class TraditionalTestExecutor {
   }
 
   // Helper methods for assertions
+  // Helper methods for assertions
   private async checkElementExists(selector: string): Promise<boolean> {
-    try {
-      // This would use actual playwright methods
-      await this.playwright.snapshot();
-      return true; // Placeholder
-    } catch {
-      return false;
-    }
+    throw new Error('checkElementExists is not implemented');
   }
 
   private async checkElementVisible(selector: string): Promise<boolean> {
-    try {
-      // This would use actual playwright methods
-      await this.playwright.snapshot();
-      return true; // Placeholder
-    } catch {
-      return false;
-    }
+    throw new Error('checkElementVisible is not implemented');
   }
 
   private async getElementText(selector: string): Promise<string> {
-    // This would use actual playwright methods
-    await this.playwright.snapshot();
-    return 'placeholder text';
+    throw new Error('getElementText is not implemented');
   }
 
   private async getElementValue(selector: string): Promise<string> {
-    // This would use actual playwright methods
-    await this.playwright.snapshot();
-    return 'placeholder value';
+    throw new Error('getElementValue is not implemented');
   }
 
   private async getElementCount(selector: string): Promise<number> {
-    // This would use actual playwright methods
-    await this.playwright.snapshot();
-    return 1;
+    throw new Error('getElementCount is not implemented');
   }
 }
