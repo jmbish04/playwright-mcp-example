@@ -13,7 +13,11 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "./test.sh",
+    "dev": "wrangler dev --local",
+    "db:create": "wrangler d1 create playwright-test-db",
+    "db:migrate": "wrangler d1 migrations apply playwright-test-db"
   },
   "dependencies": {
     "@cloudflare/playwright-mcp": "^0.0.5"

@@ -5,6 +5,7 @@ declare namespace Cloudflare {
 	interface Env {
 		MCP_OBJECT: DurableObjectNamespace<import("./src/index").PlaywrightMCP>;
 		BROWSER: Fetcher;
+		DB: D1Database;
 	}
 }
 interface Env extends Cloudflare.Env {}
