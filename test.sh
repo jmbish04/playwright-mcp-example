@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Test script for Playwright Testing Utility Worker
 # This script tests all the major endpoints and functionality
