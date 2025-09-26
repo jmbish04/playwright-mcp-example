@@ -118,10 +118,9 @@ export class AgenticTestExecutor {
 
   private async takeSnapshot(): Promise<string> {
     try {
-      await this.logger.timedExecution('take_snapshot', {}, async () => {
+      return await this.logger.timedExecution('take_snapshot', {}, async () => {
         return await this.playwright.snapshot();
       });
-      return 'snapshot_data'; // Placeholder for actual snapshot data
     } catch (error) {
       await this.logger.logError(error as Error, { action: 'take_snapshot' });
       throw error;
