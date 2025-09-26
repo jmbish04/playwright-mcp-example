@@ -5,7 +5,7 @@ import { DatabaseService } from './database';
 export class TraditionalTestExecutor {
   private logger: Logger;
   private db: DatabaseService;
-  private playwright: PlaywrightMCP;
+  private playwright: any;
 
   constructor(playwright: any, db: DatabaseService, logger: Logger) {
     this.playwright = playwright;
