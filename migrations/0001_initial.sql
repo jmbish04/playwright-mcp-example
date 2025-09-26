@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS action_logs (
   error TEXT,
   execution_time_ms INTEGER,
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (test_config_id) REFERENCES system_instructions(id)
+  FOREIGN KEY (test_config_id) REFERENCES system_instructions(id),
+  FOREIGN KEY (session_id) REFERENCES test_sessions(id) ON DELETE CASCADE
 );
 
 -- Test sessions table for managing test runs
