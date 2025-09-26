@@ -6,6 +6,11 @@ compatibility_flags = ["nodejs_compat"]
 [browser]
 binding = "BROWSER"
 
+[[d1_databases]]
+binding = "DB"
+database_name = "palywright-mcp-worker"
+database_id = "e1c75a9c-2ee8-4e55-87fe-5ef9791ce8cf"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["PlaywrightMCP"]

@@ -4,11 +4,144 @@
 
 ### Overview
 
-This project demonstrates how to use [Playwright with Cloudflare Workers](https://github.com/cloudflare/playwright) as a Model Control Protocol (MCP) server using [Cloudflare Playwright MCP](https://github.com/cloudflare/playwright-mcp).
+This project is a comprehensive testing utility worker that uses [Playwright with Cloudflare Workers](https://github.com/cloudflare/playwright) as both a Model Control Protocol (MCP) server and a standalone testing platform.
 
-It enables AI assistants to control a browser through a set of tools, allowing them to perform web automation tasks like navigation, typing, clicking, and taking screenshots.
+It provides:
 
-The server can be used with various AI platforms including Cloudflare AI Playground, Claude Desktop, and GitHub Copilot in VS Code.
+- **Traditional Unit Testing**: Execute predefined test cases with specific steps and assertions
+- **AI Agentic Testing**: Let AI agents conduct exploratory testing with natural language goals
+- **Configuration Management**: Store and manage test configurations based on URL patterns
+- **Comprehensive Logging**: Every action, result, and error is logged to D1 database
+- **Session Management**: Track test sessions with detailed results and analytics
+- **REST API**: Full API for programmatic test execution and management
+
+### Key Features
+
+#### 🤖 **AI Agentic Testing**
+- Give the AI agent a goal like "Purchase a product" or "Fill out the contact form"
+- The agent uses Playwright tools to explore and test your application like a human would
+- Reports back errors, observations, and suggested fixes
+- Configurable success criteria and retry attempts
+
+#### 📊 **Traditional Testing**
+- Define specific test steps (click, type, navigate, screenshot, etc.)
+- Set up assertions to verify expected behavior
+- Comprehensive error reporting with screenshots
+- Support for dropdowns, form filling, and complex interactions
+
+#### 🗄️ **Smart Configuration System**
+- Store test configurations in D1 database
+- URL pattern matching to automatically use the right config
+- Support for both traditional and agentic test types
+- Easy configuration management via REST API
+
+#### 📈 **Robust Logging & Analytics**
+- Every action logged with execution time and results
+- Error tracking with context and stack traces
+- Session analytics with pass/fail rates
+- Automatic cleanup of old test data
+
+### Quick Start
+
+1. **Deploy the Worker**
+   ```bash
+   npm ci
+   npx wrangler deploy
+   ```
+
+2. **Set up D1 Database**
+   ```bash
+   npx wrangler d1 create playwright-test-db
+   # Update wrangler.toml with the database ID
+   npx wrangler d1 migrations apply playwright-test-db
+   ```
+
+3. **Create Your First Test Configuration**
+   ```bash
+   curl -X POST https://your-worker.workers.dev/config \
+     -H "Content-Type: application/json" \
+     -d '{
+       "url_pattern": "demo.playwright.dev",
+       "name": "Demo Test",
+       "test_type": "agentic",
+       "instructions": "{\"goal\": \"Add 3 todo items and mark one complete\", \"success_criteria\": [\"3 items added\", \"1 item completed\"]}"
+     }'
+   ```
+
+4. **Run Your First Test**
+   ```bash
+   curl -X POST https://your-worker.workers.dev/test/agentic \
+     -H "Content-Type: application/json" \
+     -d '{"url": "https://demo.playwright.dev/todomvc", "useStoredConfig": true}'
+   ```
+
+### API Endpoints
+
+#### Configuration Management
+- `GET /config` - List all configurations
+- `POST /config` - Create new configuration
+- `PUT /config` - Update configuration
+- `DELETE /config?id={id}` - Delete configuration
+- `GET /config/find?url={url}` - Find configuration for URL
+
+#### Test Execution
+- `POST /test/traditional` - Execute traditional test
+- `POST /test/agentic` - Execute AI agentic test
+
+#### Session Management
+- `GET /session` - List all test sessions
+- `GET /session?sessionId={id}` - Get session details
+- `GET /session/results?sessionId={id}` - Get session results and logs
+- `DELETE /session?sessionId={id}` - Cancel session
+
+#### Analytics & Utilities
+- `GET /analytics/stats?sessionId={id}` - Get session statistics
+- `POST /cleanup/old-sessions?days={days}` - Cleanup old sessions
+- `GET /health` - Health check
+- `GET /docs` - API documentation
+
+### Database Schema
+
+The worker uses D1 database with the following tables:
+- **system_instructions**: Store test configurations and instructions
+- **action_logs**: Comprehensive logging of all actions and results
+- **test_sessions**: Track test execution sessions
+- **test_results**: Store individual test results and outcomes
+
+### Traditional vs Agentic Testing
+
+#### Traditional Testing
+```json
+{
+  "name": "Login Test",
+  "steps": [
+    {"action": "navigate", "url": "https://app.example.com/login"},
+    {"action": "type", "selector": "#username", "value": "testuser"},
+    {"action": "type", "selector": "#password", "value": "password123"},
+    {"action": "click", "selector": "#login-button"},
+    {"action": "screenshot"}
+  ],
+  "assertions": [
+    {"type": "exists", "selector": ".dashboard"},
+    {"type": "text", "selector": ".welcome", "expected": "Welcome!"}
+  ]
+}
+```
+
+#### Agentic Testing
+```json
+{
+  "goal": "Log into the application and verify dashboard access",
+  "context": "This is a web application requiring username/password login",
+  "success_criteria": [
+    "Successfully logged in",
+    "Dashboard is visible",
+    "User menu shows correct username"
+  ],
+  "max_attempts": 3,
+  "timeout_ms": 180000
+}
+```
 
 ### Deploy
 
@@ -19,8 +152,19 @@ Follow these steps to set up and deploy the project:
 npm ci
 ```
 
-2. Deploy to Cloudflare Workers:
+2. Create D1 Database:
+```bash
+npx wrangler d1 create playwright-test-db
+```
 
+3. Update `wrangler.toml` with your database ID
+
+4. Run migrations:
+```bash
+npx wrangler d1 migrations apply playwright-test-db
+```
+
+5. Deploy to Cloudflare Workers:
 ```bash
 npx wrangler deploy
 ```
