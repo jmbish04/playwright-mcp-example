@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>D1 Configuration · Playwright MCP</title>
+  <style>
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      margin: 0;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 2rem 1.5rem 1rem;
+      background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.45), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.4), transparent 50%);
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 2.8rem);
+    }
+
+    header p {
+      margin: 0.75rem auto 0;
+      max-width: 720px;
+      line-height: 1.6;
+      color: rgba(226, 232, 240, 0.8);
+    }
+
+    main {
+      flex: 1;
+      padding: 0 1.5rem 4rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    a.back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: rgba(148, 163, 184, 0.9);
+      text-decoration: none;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+
+    section {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 20px;
+      padding: 1.8rem;
+      margin-bottom: 1.75rem;
+      box-shadow: 0 30px 60px rgba(15, 23, 42, 0.45);
+    }
+
+    section h2 {
+      margin-top: 0;
+      font-size: 1.4rem;
+      letter-spacing: 0.02em;
+    }
+
+    button,
+    .button-link {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      border: none;
+      border-radius: 999px;
+      padding: 0.65rem 1.4rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.35);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+
+    button.secondary {
+      background: rgba(148, 163, 184, 0.2);
+      box-shadow: none;
+    }
+
+    button:hover,
+    .button-link:hover,
+    button:focus,
+    .button-link:focus {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 35px rgba(37, 99, 235, 0.4);
+    }
+
+    .grid {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .grid.two {
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+
+    form {
+      display: grid;
+      gap: 1rem;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    input,
+    select,
+    textarea {
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(15, 23, 42, 0.6);
+      color: inherit;
+      padding: 0.75rem 1rem;
+      font: inherit;
+      transition: border 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: rgba(96, 165, 250, 0.9);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25);
+    }
+
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.95rem;
+    }
+
+    th,
+    td {
+      padding: 0.75rem 0.8rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    th {
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      color: rgba(148, 163, 184, 0.8);
+    }
+
+    tbody tr:hover {
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    code,
+    pre {
+      font-family: 'Fira Code', 'SFMono-Regular', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 12px;
+      padding: 0.9rem 1rem;
+      color: rgba(226, 232, 240, 0.88);
+      line-height: 1.5;
+      overflow-x: auto;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(96, 165, 250, 0.18);
+      color: rgba(191, 219, 254, 0.9);
+      padding: 0.4rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      margin-right: 0.4rem;
+    }
+
+    .status {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      background: rgba(30, 64, 175, 0.25);
+      border: 1px solid rgba(96, 165, 250, 0.25);
+      display: none;
+    }
+
+    .status.error {
+      background: rgba(185, 28, 28, 0.22);
+      border-color: rgba(248, 113, 113, 0.35);
+    }
+
+    .schema-grid {
+      display: grid;
+      gap: 1.25rem;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      margin-top: 1.5rem;
+    }
+
+    .schema-card {
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .schema-card h3 {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    .schema-card ul {
+      padding-left: 1.1rem;
+      margin: 0;
+    }
+
+    .schema-card li {
+      margin-bottom: 0.35rem;
+      color: rgba(226, 232, 240, 0.78);
+    }
+
+    @media (max-width: 720px) {
+      section {
+        padding: 1.4rem;
+        border-radius: 16px;
+      }
+
+      button,
+      .button-link {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>D1 Configuration Console</h1>
+    <p>Initialize the D1 schema used by MCP sessions, maintain system instructions, and keep your endpoints in sync.</p>
+  </header>
+
+  <main>
+    <a class="back-link" href="/">← Back to control center</a>
+
+    <section id="database-setup">
+      <h2>Database Setup</h2>
+      <p>Ensure all required tables and indexes exist before storing configurations or running tests.</p>
+      <div class="grid two">
+        <div>
+          <button id="ensure-schema-btn" type="button">Ensure schema now</button>
+          <button id="refresh-schema-btn" class="secondary" type="button">Refresh schema snapshot</button>
+          <div id="setup-status" class="status"></div>
+        </div>
+        <div>
+          <p style="margin-top:0">Schema files are mirrored from <code>migrations/0001_initial.sql</code> and exposed via the REST API for parity with MCP automation.</p>
+          <a class="button-link" href="/openapi.json" target="_blank" rel="noopener">View OpenAPI contract</a>
+        </div>
+      </div>
+      <div id="schema-overview" class="schema-grid"></div>
+    </section>
+
+    <section id="configurations">
+      <h2>System Instructions</h2>
+      <p>Use the form below to create or update records in the <code>system_instructions</code> table. Every change is immediately available to both MCP tools and REST endpoints.</p>
+
+      <form id="config-form">
+        <input type="hidden" id="config-id" />
+        <label>
+          URL pattern
+          <input id="url-pattern" type="text" placeholder="demo.playwright.dev" required />
+        </label>
+        <label>
+          Name
+          <input id="config-name" type="text" placeholder="Demo Todo Agent" required />
+        </label>
+        <label>
+          Test type
+          <select id="test-type" required>
+            <option value="traditional">Traditional</option>
+            <option value="agentic">Agentic</option>
+          </select>
+        </label>
+        <label>
+          Instructions JSON
+          <textarea id="instructions" placeholder='{"goal":"Add todos","success_criteria":["3 todos created"]}' required></textarea>
+        </label>
+        <label>
+          Active
+          <select id="is-active">
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </select>
+        </label>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+          <button type="submit" id="submit-config-btn">Create configuration</button>
+          <button type="button" class="secondary" id="reset-form-btn">Reset form</button>
+        </div>
+        <div id="config-status" class="status"></div>
+      </form>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2rem;gap:1rem;flex-wrap:wrap;">
+        <h3 style="margin:0;">Existing configurations</h3>
+        <button type="button" class="secondary" id="refresh-configs-btn">Refresh list</button>
+      </div>
+
+      <div style="overflow-x:auto;margin-top:1rem;">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>URL Pattern</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Updated</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="config-table-body">
+            <tr><td colspan="7" style="text-align:center;color:rgba(148,163,184,0.7);padding:1.5rem;">No configurations yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const configForm = document.getElementById('config-form');
+    const setupStatus = document.getElementById('setup-status');
+    const configStatus = document.getElementById('config-status');
+    const schemaOverview = document.getElementById('schema-overview');
+    const configTableBody = document.getElementById('config-table-body');
+
+    document.getElementById('ensure-schema-btn').addEventListener('click', async () => {
+      await withStatus(setupStatus, ensureSchema());
+      await loadSchema();
+    });
+
+    document.getElementById('refresh-schema-btn').addEventListener('click', loadSchema);
+    document.getElementById('refresh-configs-btn').addEventListener('click', loadConfigs);
+    document.getElementById('reset-form-btn').addEventListener('click', resetForm);
+
+    configForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await withStatus(configStatus, submitConfig());
+      await loadConfigs();
+      if (!document.getElementById('config-id').value) {
+        resetForm();
+      }
+    });
+
+    async function ensureSchema() {
+      const response = await fetch('/admin/setup', { method: 'POST' });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      const data = await response.json();
+      return `Schema ensured. Tables present: ${data.existingTables.join(', ')}`;
+    }
+
+    async function loadSchema() {
+      const response = await fetch('/admin/schema');
+      if (!response.ok) {
+        throw new Error('Unable to load schema overview');
+      }
+      const data = await response.json();
+      renderSchema(data.tables || []);
+    }
+
+    function renderSchema(tables) {
+      if (!tables.length) {
+        schemaOverview.innerHTML = '<p style="color:rgba(148,163,184,0.7)">No tables detected. Run "Ensure schema" first.</p>';
+        return;
+      }
+
+      schemaOverview.innerHTML = tables.map(table => `
+        <article class="schema-card">
+          <h3>${table.name}</h3>
+          <div class="chip">${table.rowCount} rows</div>
+          <div>
+            <strong>Columns</strong>
+            <ul>
+              ${table.columns.map(col => `<li><code>${col.name}</code> <span style="opacity:0.7">${col.type}${col.primaryKey ? ' · PK' : ''}${col.notNull ? ' · NOT NULL' : ''}</span></li>`).join('')}
+            </ul>
+          </div>
+          ${table.indexes.length ? `<div><strong>Indexes</strong><ul>${table.indexes.map(idx => `<li>${idx.name}${idx.unique ? ' (unique)' : ''}</li>`).join('')}</ul></div>` : ''}
+        </article>
+      `).join('');
+    }
+
+    async function loadConfigs() {
+      const response = await fetch('/config');
+      if (!response.ok) {
+        throw new Error('Unable to load configurations');
+      }
+      const data = await response.json();
+      renderConfigTable(data.configs || []);
+    }
+
+    function renderConfigTable(configs) {
+      if (!configs.length) {
+        configTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:rgba(148,163,184,0.7);padding:1.5rem;">No configurations yet.</td></tr>';
+        return;
+      }
+
+      configTableBody.innerHTML = configs.map(config => `
+        <tr>
+          <td>${config.id}</td>
+          <td>${escapeHtml(config.name)}</td>
+          <td><code>${escapeHtml(config.url_pattern)}</code></td>
+          <td><span class="chip">${config.test_type}</span></td>
+          <td>${config.is_active ? 'Active' : 'Inactive'}</td>
+          <td>${config.updated_at ? new Date(config.updated_at).toLocaleString() : '—'}</td>
+          <td style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <button type="button" class="secondary" data-action="edit" data-id="${config.id}">Edit</button>
+            <button type="button" data-action="delete" data-id="${config.id}">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+
+      configTableBody.querySelectorAll('button[data-action="edit"]').forEach(button => {
+        button.addEventListener('click', () => populateForm(button.dataset.id, configs));
+      });
+
+      configTableBody.querySelectorAll('button[data-action="delete"]').forEach(button => {
+        button.addEventListener('click', () => deleteConfig(button.dataset.id));
+      });
+    }
+
+    async function submitConfig() {
+      const id = document.getElementById('config-id').value;
+      const payload = {
+        id: id ? Number(id) : undefined,
+        url_pattern: document.getElementById('url-pattern').value.trim(),
+        name: document.getElementById('config-name').value.trim(),
+        test_type: document.getElementById('test-type').value,
+        instructions: document.getElementById('instructions').value.trim(),
+        is_active: document.getElementById('is-active').value === 'true'
+      };
+
+      let response;
+      if (id) {
+        response = await fetch('/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        const { id, ...createPayload } = payload;
+        response = await fetch('/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(createPayload)
+        });
+      }
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const message = await response.json();
+      return message.message || (id ? 'Configuration updated' : 'Configuration created');
+    }
+
+    function populateForm(id, configs) {
+      const config = configs.find(c => String(c.id) === String(id));
+      if (!config) return;
+
+      document.getElementById('config-id').value = config.id;
+      document.getElementById('url-pattern').value = config.url_pattern;
+      document.getElementById('config-name').value = config.name;
+      document.getElementById('test-type').value = config.test_type;
+      document.getElementById('instructions').value = tryFormatJson(config.instructions);
+      document.getElementById('is-active').value = String(config.is_active !== false);
+      document.getElementById('submit-config-btn').textContent = 'Update configuration';
+      configStatus.style.display = 'none';
+    }
+
+    async function deleteConfig(id) {
+      if (!confirm('Delete configuration #' + id + '?')) {
+        return;
+      }
+
+      const response = await fetch(`/config?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!response.ok) {
+        alert('Failed to delete configuration.');
+        return;
+      }
+
+      await loadConfigs();
+    }
+
+    function resetForm() {
+      configForm.reset();
+      document.getElementById('config-id').value = '';
+      document.getElementById('submit-config-btn').textContent = 'Create configuration';
+      configStatus.style.display = 'none';
+    }
+
+    function tryFormatJson(value) {
+      try {
+        return JSON.stringify(JSON.parse(value), null, 2);
+      } catch (error) {
+        return value;
+      }
+    }
+
+    async function withStatus(element, promise) {
+      element.classList.remove('error');
+      element.style.display = 'block';
+      element.textContent = 'Processing…';
+      try {
+        const message = await promise;
+        element.textContent = message;
+      } catch (error) {
+        element.textContent = error instanceof Error ? error.message : String(error);
+        element.classList.add('error');
+        throw error;
+      }
+    }
+
+    function escapeHtml(value) {
+      return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // Initial load
+    loadSchema().catch(error => {
+      setupStatus.style.display = 'block';
+      setupStatus.classList.add('error');
+      setupStatus.textContent = error.message || 'Unable to load schema';
+    });
+
+    loadConfigs().catch(error => {
+      configStatus.style.display = 'block';
+      configStatus.classList.add('error');
+      configStatus.textContent = error.message || 'Unable to load configurations';
+    });
+  </script>
+</body>
+</html>

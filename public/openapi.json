@@ -1,0 +1,1233 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Playwright MCP REST Companion",
+    "version": "1.0.0",
+    "description": "REST endpoints that mirror the Playwright MCP server functionality, including D1 configuration, test execution, and telemetry access."
+  },
+  "servers": [
+    {
+      "url": "https://{worker-subdomain}.workers.dev",
+      "description": "Deployed Cloudflare Worker",
+      "variables": {
+        "worker-subdomain": {
+          "default": "playwright-mcp-example"
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Control center UI",
+        "description": "Serves the static HTML dashboard for the REST + MCP control center.",
+        "responses": {
+          "200": {
+            "description": "HTML landing page"
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "Download OpenAPI definition",
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "OpenAPI document"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "get": {
+        "summary": "MCP HTTP endpoint",
+        "description": "Primary entry point for MCP-compatible clients. Delegates to @cloudflare/playwright-mcp.",
+        "responses": {
+          "200": {
+            "description": "MCP handshake response"
+          }
+        }
+      }
+    },
+    "/sse": {
+      "get": {
+        "summary": "MCP SSE stream",
+        "description": "Server-sent events channel for the Playwright MCP server.",
+        "responses": {
+          "200": {
+            "description": "SSE stream"
+          }
+        }
+      }
+    },
+    "/config": {
+      "get": {
+        "summary": "List configurations",
+        "responses": {
+          "200": {
+            "description": "List of stored system instructions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create configuration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuration created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update configuration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SystemInstruction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuration updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Deactivate configuration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Configuration deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config/list": {
+      "get": {
+        "summary": "List configurations (alias)",
+        "responses": {
+          "200": {
+            "description": "List of stored system instructions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config/find": {
+      "get": {
+        "summary": "Find configuration by URL",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching configuration, if any",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/setup": {
+      "post": {
+        "summary": "Ensure D1 schema",
+        "description": "Creates any missing tables and indexes required by the worker. Mirrors the D1 migration used by MCP tooling.",
+        "responses": {
+          "200": {
+            "description": "Schema ensured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaEnsureResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/schema": {
+      "get": {
+        "summary": "Inspect D1 schema",
+        "responses": {
+          "200": {
+            "description": "Schema overview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaOverview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/traditional": {
+      "post": {
+        "summary": "Execute traditional test",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TraditionalTestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Traditional test session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestExecutionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/agentic": {
+      "post": {
+        "summary": "Execute agentic test",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgenticTestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agentic test session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestExecutionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session": {
+      "get": {
+        "summary": "List or inspect sessions",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "If provided, returns the detailed record for a specific session. Otherwise returns the newest sessions."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sessions list or detailed session payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/SessionListResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionDetailResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Cancel session",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session cancellation acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/list": {
+      "get": {
+        "summary": "List sessions (alias)",
+        "responses": {
+          "200": {
+            "description": "Recent sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/results": {
+      "get": {
+        "summary": "Fetch session results and logs",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session results payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResultsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analytics/stats": {
+      "get": {
+        "summary": "Session analytics",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Aggregated analytics for a session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionStatsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cleanup/old-sessions": {
+      "post": {
+        "summary": "Cleanup aged sessions",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 30
+            },
+            "description": "Delete sessions older than the given number of days."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cleanup report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health probe",
+        "responses": {
+          "200": {
+            "description": "Health status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SystemInstruction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "url_pattern": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "instructions": {
+            "type": "string",
+            "description": "JSON encoded instructions"
+          },
+          "test_type": {
+            "type": "string",
+            "enum": [
+              "traditional",
+              "agentic"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "is_active": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "url_pattern",
+          "name",
+          "instructions",
+          "test_type"
+        ]
+      },
+      "ConfigCreateRequest": {
+        "type": "object",
+        "properties": {
+          "url_pattern": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "test_type": {
+            "type": "string",
+            "enum": [
+              "traditional",
+              "agentic"
+            ]
+          },
+          "is_active": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "url_pattern",
+          "name",
+          "instructions",
+          "test_type"
+        ]
+      },
+      "ConfigListResponse": {
+        "type": "object",
+        "properties": {
+          "configs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SystemInstruction"
+            }
+          }
+        },
+        "required": [
+          "configs"
+        ]
+      },
+      "ConfigResponse": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SystemInstruction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "MessageResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "SchemaOverview": {
+        "type": "object",
+        "properties": {
+          "tables": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SchemaTable"
+            }
+          }
+        },
+        "required": [
+          "tables"
+        ]
+      },
+      "SchemaTable": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "rowCount": {
+            "type": "integer"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SchemaColumn"
+            }
+          },
+          "indexes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SchemaIndex"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "rowCount",
+          "columns",
+          "indexes"
+        ]
+      },
+      "SchemaColumn": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "notNull": {
+            "type": "boolean"
+          },
+          "defaultValue": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "primaryKey": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "notNull",
+          "primaryKey"
+        ]
+      },
+      "SchemaIndex": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "unique": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "unique"
+        ]
+      },
+      "SchemaEnsureResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SchemaOverview"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "createdTables": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "existingTables": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SchemaTable"
+                }
+              }
+            },
+            "required": [
+              "message",
+              "createdTables",
+              "existingTables"
+            ]
+          }
+        ]
+      },
+      "TraditionalTestRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "testCase": {
+            "$ref": "#/components/schemas/TraditionalTestCase"
+          },
+          "useStoredConfig": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "TraditionalTestCase": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestStep"
+            }
+          },
+          "assertions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestAssertion"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "steps",
+          "assertions"
+        ]
+      },
+      "TestStep": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "navigate",
+              "click",
+              "type",
+              "select",
+              "wait",
+              "screenshot",
+              "custom"
+            ]
+          },
+          "selector": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "description"
+        ]
+      },
+      "TestAssertion": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "exists",
+              "visible",
+              "text",
+              "value",
+              "count",
+              "custom"
+            ]
+          },
+          "selector": {
+            "type": "string"
+          },
+          "expected": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "description"
+        ]
+      },
+      "AgenticTestRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "config": {
+            "$ref": "#/components/schemas/AgenticTestConfig"
+          },
+          "useStoredConfig": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "AgenticTestConfig": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "type": "string"
+          },
+          "context": {
+            "type": "string"
+          },
+          "success_criteria": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "max_attempts": {
+            "type": "integer"
+          },
+          "timeout_ms": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "goal",
+          "context",
+          "success_criteria"
+        ]
+      },
+      "TestExecutionResponse": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "executionTime": {
+            "type": "integer",
+            "description": "Execution time in milliseconds"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestResult"
+            }
+          },
+          "screenshots": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "errorSummary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "sessionId",
+          "success",
+          "executionTime"
+        ]
+      },
+      "TestResult": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "test_name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed",
+              "skipped"
+            ]
+          },
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "screenshot_path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "execution_time_ms": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "session_id",
+          "test_name",
+          "status"
+        ]
+      },
+      "ActionLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "test_config_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "action_type": {
+            "type": "string"
+          },
+          "action_data": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "result": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "execution_time_ms": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "session_id",
+          "action_type"
+        ]
+      },
+      "TestSession": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "test_type": {
+            "type": "string",
+            "enum": [
+              "traditional",
+              "agentic"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "config_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_time": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "results": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error_summary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "test_type",
+          "status"
+        ]
+      },
+      "SessionListResponse": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestSession"
+            }
+          }
+        },
+        "required": [
+          "sessions"
+        ]
+      },
+      "SessionDetailResponse": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/TestSession"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestResult"
+            }
+          },
+          "logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActionLog"
+            }
+          },
+          "stats": {
+            "$ref": "#/components/schemas/SessionStats"
+          }
+        },
+        "required": [
+          "session",
+          "results",
+          "logs",
+          "stats"
+        ]
+      },
+      "SessionResultsResponse": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestResult"
+            }
+          },
+          "logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActionLog"
+            }
+          },
+          "stats": {
+            "$ref": "#/components/schemas/SessionStats"
+          }
+        },
+        "required": [
+          "sessionId",
+          "results",
+          "logs",
+          "stats"
+        ]
+      },
+      "SessionStatsResponse": {
+        "type": "object",
+        "properties": {
+          "stats": {
+            "$ref": "#/components/schemas/SessionStats"
+          }
+        },
+        "required": [
+          "stats"
+        ]
+      },
+      "SessionStats": {
+        "type": "object",
+        "properties": {
+          "total_actions": {
+            "type": "integer"
+          },
+          "total_errors": {
+            "type": "integer"
+          },
+          "avg_execution_time": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "test_results_summary": {
+            "type": "object",
+            "properties": {
+              "passed": {
+                "type": "integer"
+              },
+              "failed": {
+                "type": "integer"
+              },
+              "skipped": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "passed",
+              "failed",
+              "skipped"
+            ]
+          }
+        },
+        "required": [
+          "total_actions",
+          "total_errors",
+          "avg_execution_time",
+          "test_results_summary"
+        ]
+      },
+      "HealthStatus": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp",
+          "version"
+        ]
+      }
+    }
+  }
+}
