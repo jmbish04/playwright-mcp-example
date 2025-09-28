@@ -1,13 +1,13 @@
-import { AgenticTestConfig, TestExecutionResult } from './types';
+import type { AgenticTestConfig, TestExecutionResult, PlaywrightMcpAgent } from './types';
 import { Logger } from './logger';
 import { DatabaseService } from './database';
 
 export class AgenticTestExecutor {
   private logger: Logger;
   private db: DatabaseService;
-  private playwright: PlaywrightMCP;
+  private playwright: PlaywrightMcpAgent;
 
-  constructor(playwright: any, db: DatabaseService, logger: Logger) {
+  constructor(playwright: PlaywrightMcpAgent, db: DatabaseService, logger: Logger) {
     this.playwright = playwright;
     this.db = db;
     this.logger = logger;
