@@ -1,10 +1,10 @@
+interface McpAgentFetcher {
+  fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response>;
+}
+
 export interface PlaywrightMcpAgent {
-  serve(path: string): {
-    fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response>;
-  };
-  serveSSE(path: string): {
-    fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response>;
-  };
+  serve(path: string): McpAgentFetcher;
+  serveSSE(path: string): McpAgentFetcher;
   navigate(url: string): Promise<unknown>;
   click(selector: string): Promise<unknown>;
   type(selector: string, text: string): Promise<unknown>;
