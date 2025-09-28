@@ -7,7 +7,7 @@ import { AgenticTestExecutor } from './agentic-test-executor';
 import type { PlaywrightMcpAgent } from './types';
 import { SystemInstruction, TraditionalTestCase, AgenticTestConfig } from './types';
 
-export const PlaywrightMCP = createMcpAgent(env.BROWSER) as unknown as PlaywrightMcpAgent;
+export const PlaywrightMCP = createMcpAgent(env.BROWSER) as PlaywrightMcpAgent;
 
 // Generate unique session ID
 function generateSessionId(): string {
