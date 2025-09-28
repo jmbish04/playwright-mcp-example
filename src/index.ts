@@ -4,9 +4,10 @@ import { DatabaseService } from './database';
 import { Logger } from './logger';
 import { TraditionalTestExecutor } from './traditional-test-executor';
 import { AgenticTestExecutor } from './agentic-test-executor';
+import type { PlaywrightMcpAgent } from './types';
 import { SystemInstruction, TraditionalTestCase, AgenticTestConfig } from './types';
 
-export const PlaywrightMCP = createMcpAgent(env.BROWSER);
+export const PlaywrightMCP = createMcpAgent(env.BROWSER) as unknown as PlaywrightMcpAgent;
 
 // Generate unique session ID
 function generateSessionId(): string {
