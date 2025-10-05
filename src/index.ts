@@ -114,7 +114,7 @@ export default {
           const url = searchParams.get('url');
           if (!url) return errorResponse('URL parameter is required');
 
-          const config = await db.getSystemInstructionByUrl(url);
+      const config = await db.getSystemInstructionByUrl(url, 'traditional');
           return successResponse({ config });
 
         case '/admin/setup':
@@ -377,7 +377,7 @@ async function handleAgenticTest(request: Request, env: Env, db: DatabaseService
 
     if (payload.useStoredConfig !== false) {
       // Try to find stored configuration
-      const storedConfig = await db.getSystemInstructionByUrl(payload.url);
+      const storedConfig = await db.getSystemInstructionByUrl(payload.url, 'agentic');
       if (storedConfig && storedConfig.test_type === 'agentic') {
         try {
           config = JSON.parse(storedConfig.instructions);

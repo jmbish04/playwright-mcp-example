@@ -175,15 +175,20 @@ export class DatabaseService {
     return result.meta.last_row_id;
   }
 
-  async getSystemInstructionByUrl(url: string): Promise<SystemInstruction | null> {
-    const results = await this.db.prepare(
-      `SELECT * FROM system_instructions 
-       WHERE is_active = TRUE 
-       AND ? LIKE '%' || url_pattern || '%'
-       ORDER BY LENGTH(url_pattern) DESC
-       LIMIT 1`
-    ).bind(url).all();
-    
+  async getSystemInstructionByUrl(url: string, testType?: 'traditional' | 'agentic'): Promise<SystemInstruction | null> {
+    const hasType = typeof testType === 'string' && (testType === 'traditional' || testType === 'agentic');
+    const sql = `SELECT *
+                 FROM system_instructions
+                 WHERE is_active = TRUE
+                 ${hasType ? 'AND test_type = ?' : ''}
+                 AND instr(?, url_pattern) > 0
+                 ORDER BY LENGTH(url_pattern) DESC
+                 LIMIT 1`;
+
+    const stmt = this.db.prepare(sql);
+    const bindArgs = hasType ? [testType, url] : [url];
+    const results = await stmt.bind(...bindArgs).all();
+
     return (results.results[0] as unknown as SystemInstruction) || null;
   }
 
