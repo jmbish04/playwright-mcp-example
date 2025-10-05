@@ -1,16 +1,11 @@
-interface McpAgentFetcher {
-  fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response>;
-}
-
-export interface PlaywrightMcpAgent {
-  serve(path: string): McpAgentFetcher;
-  serveSSE(path: string): McpAgentFetcher;
-  navigate(url: string): Promise<unknown>;
-  click(selector: string): Promise<unknown>;
-  type(selector: string, text: string): Promise<unknown>;
-  selectOption(selector: string, value: string): Promise<unknown>;
+export interface PlaywrightAutomationClient {
+  navigate(url: string): Promise<void>;
+  click(selector: string): Promise<void>;
+  type(selector: string, text: string): Promise<void>;
+  selectOption(selector: string, value: string): Promise<void>;
   takeScreenshot(): Promise<string>;
   snapshot(): Promise<string>;
+  dispose(): Promise<void>;
 }
 
 export interface SystemInstruction {

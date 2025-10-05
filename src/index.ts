@@ -4,10 +4,10 @@ import { DatabaseService } from './database';
 import { Logger } from './logger';
 import { TraditionalTestExecutor } from './traditional-test-executor';
 import { AgenticTestExecutor } from './agentic-test-executor';
-import type { PlaywrightMcpAgent } from './types';
+import { PlaywrightClient } from './playwright-client';
 import { SystemInstruction, TraditionalTestCase, AgenticTestConfig } from './types';
 
-export const PlaywrightMCP = createMcpAgent(env.BROWSER) as PlaywrightMcpAgent;
+export const PlaywrightMCP = createMcpAgent(env.BROWSER);
 
 // Generate unique session ID
 function generateSessionId(): string {
@@ -299,7 +299,8 @@ async function handleTraditionalTest(request: Request, env: Env, db: DatabaseSer
     await logger.logSessionStart(payload.url, 'traditional');
 
     // Execute test
-    const executor = new TraditionalTestExecutor(PlaywrightMCP, db, logger);
+    const playwrightClient = new PlaywrightClient(env.BROWSER);
+    const executor = new TraditionalTestExecutor(playwrightClient, db, logger);
     const result = await executor.executeTest(sessionId, testCase);
 
     // Update session status
@@ -389,7 +390,8 @@ async function handleAgenticTest(request: Request, env: Env, db: DatabaseService
     await logger.logSessionStart(payload.url, 'agentic');
 
     // Execute agentic test
-    const executor = new AgenticTestExecutor(PlaywrightMCP, db, logger);
+    const playwrightClient = new PlaywrightClient(env.BROWSER);
+    const executor = new AgenticTestExecutor(playwrightClient, db, logger);
     const result = await executor.executeTest(sessionId, config);
 
     // Update session status
@@ -463,18 +465,11 @@ async function serveAsset(env: Env, request: Request, assetPath?: string): Promi
     return new Response('Not Found', { status: 404 });
   }
 
-  const url = new URL(request.url);
-
   if (assetPath) {
+    const url = new URL(request.url);
     url.pathname = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+    return env.ASSETS.fetch(new Request(url.toString(), request));
   }
 
-  const assetRequest = assetPath ? new Request(url.toString(), request) : request;
-  const response = await env.ASSETS.fetch(assetRequest);
-
-  if (response.status === 404 && assetPath && !assetPath.endsWith('/index.html')) {
-    return serveAsset(env, request, '/index.html');
-  }
-
-  return response;
+  return env.ASSETS.fetch(request);
 }

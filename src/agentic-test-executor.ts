@@ -1,13 +1,13 @@
-import type { AgenticTestConfig, TestExecutionResult, PlaywrightMcpAgent } from './types';
+import type { AgenticTestConfig, TestExecutionResult, PlaywrightAutomationClient } from './types';
 import { Logger } from './logger';
 import { DatabaseService } from './database';
 
 export class AgenticTestExecutor {
   private logger: Logger;
   private db: DatabaseService;
-  private playwright: PlaywrightMcpAgent;
+  private playwright: PlaywrightAutomationClient;
 
-  constructor(playwright: PlaywrightMcpAgent, db: DatabaseService, logger: Logger) {
+  constructor(playwright: PlaywrightAutomationClient, db: DatabaseService, logger: Logger) {
     this.playwright = playwright;
     this.db = db;
     this.logger = logger;
@@ -100,6 +100,7 @@ export class AgenticTestExecutor {
 
     } finally {
       clearTimeout(testTimeout);
+      await this.playwright.dispose();
     }
 
     const executionTime = Date.now() - startTime;
