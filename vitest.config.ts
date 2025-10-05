@@ -11,12 +11,14 @@ export default defineConfig({
   resolve: {
     alias: {
       'cloudflare:workers': path.resolve(__dirname, 'tests/shims/cloudflare-workers.ts'),
+      'cloudflare:email': path.resolve(__dirname, 'tests/shims/cloudflare-email.ts'),
     },
   },
   optimizeDeps: {
     esbuildOptions: {
       alias: {
         'cloudflare:workers': path.resolve(__dirname, 'tests/shims/cloudflare-workers.ts'),
+        'cloudflare:email': path.resolve(__dirname, 'tests/shims/cloudflare-email.ts'),
       },
     },
   },
@@ -25,6 +27,7 @@ export default defineConfig({
     resolve: {
       alias: {
         'cloudflare:workers': path.resolve(__dirname, 'tests/shims/cloudflare-workers.ts'),
+        'cloudflare:email': path.resolve(__dirname, 'tests/shims/cloudflare-email.ts'),
       },
     },
   },
