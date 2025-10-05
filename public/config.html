@@ -299,10 +299,31 @@
             <option value="agentic">Agentic</option>
           </select>
         </label>
-        <label>
-          Instructions JSON
-          <textarea id="instructions" placeholder='{"goal":"Add todos","success_criteria":["3 todos created"]}' required></textarea>
-        </label>
+        <div>
+          <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+            <input type="checkbox" id="use-json-toggle" />
+            <span>Provide full Instructions as JSON</span>
+          </label>
+          <div id="kv-builder" style="border:1px solid rgba(148,163,184,0.25);padding:0.75rem;border-radius:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+              <strong>Instructions (form)</strong>
+              <div>
+                <button type="button" class="secondary" id="add-row-btn">+ Add row</button>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Key</th><th>Value</th><th></th></tr>
+              </thead>
+              <tbody id="kv-rows"></tbody>
+            </table>
+          </div>
+
+          <label id="json-editor-wrap" style="display:none;margin-top:0.75rem;">
+            Instructions JSON
+            <textarea id="instructions" placeholder='{"goal":"Add todos","success_criteria":["3 todos created"]}'></textarea>
+          </label>
+        </div>
         <label>
           Active
           <select id="is-active">
@@ -344,6 +365,137 @@
   </main>
 
   <script>
+    // Allowed schema for instruction keys. Extend as needed.
+    const INSTRUCTION_SCHEMA = {
+      goal: { type: 'string' },
+      success_criteria: { type: 'array' },
+      max_attempts: { type: 'number' },
+      timeout_ms: { type: 'number' },
+      // traditional test example keys
+      steps: { type: 'array' },
+      assertions: { type: 'array' }
+    };
+
+    function createValueEditorFor(key) {
+      const schema = INSTRUCTION_SCHEMA[key];
+      const input = document.createElement(schema?.type === 'array' ? 'textarea' : 'input');
+      if (schema?.type === 'number') {
+        input.type = 'number';
+      } else if (schema?.type === 'string') {
+        input.type = 'text';
+      } else if (schema?.type === 'array') {
+        input.placeholder = '["item1", "item2"]';
+        input.rows = 2;
+      } else {
+        input.type = 'text';
+      }
+      input.required = true;
+      input.style.width = '100%';
+      return input;
+    }
+
+    function parseEditorValue(key, raw) {
+      const schema = INSTRUCTION_SCHEMA[key];
+      if (!schema) return raw;
+      if (schema.type === 'number') return Number(raw);
+      if (schema.type === 'array') {
+        try { return JSON.parse(raw || '[]'); } catch { return []; }
+      }
+      return raw;
+    }
+
+    function stringifyValue(key, value) {
+      const schema = INSTRUCTION_SCHEMA[key];
+      if (!schema) return String(value ?? '');
+      if (schema.type === 'array') return JSON.stringify(value ?? []);
+      return String(value ?? '');
+    }
+
+    function addKvRow(prefill) {
+      const tbody = document.getElementById('kv-rows');
+      const tr = document.createElement('tr');
+      const tdKey = document.createElement('td');
+      const tdVal = document.createElement('td');
+      const tdActions = document.createElement('td');
+
+      const select = document.createElement('select');
+      select.innerHTML = `<option value="">Select key…</option>` +
+        Object.keys(INSTRUCTION_SCHEMA).map(k => `<option value="${k}">${k}</option>`).join('');
+      select.required = true;
+
+      let editor = createValueEditorFor(prefill?.key || 'goal');
+      tdKey.appendChild(select);
+      tdVal.appendChild(editor);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'secondary';
+      removeBtn.textContent = 'Remove';
+      removeBtn.addEventListener('click', () => tr.remove());
+      tdActions.appendChild(removeBtn);
+
+      select.addEventListener('change', () => {
+        tdVal.innerHTML = '';
+        const newEditor = createValueEditorFor(select.value);
+        tdVal.appendChild(newEditor);
+      });
+
+      if (prefill) {
+        select.value = prefill.key;
+        tdVal.innerHTML = '';
+        editor = createValueEditorFor(prefill.key);
+        editor.value = stringifyValue(prefill.key, prefill.value);
+        tdVal.appendChild(editor);
+      }
+
+      tr.appendChild(tdKey);
+      tr.appendChild(tdVal);
+      tr.appendChild(tdActions);
+      tbody.appendChild(tr);
+    }
+
+    function collectKvAsObject() {
+      const rows = Array.from(document.querySelectorAll('#kv-rows tr'));
+      const obj = {};
+      for (const row of rows) {
+        const key = row.querySelector('select')?.value;
+        const editor = row.querySelector('input,textarea');
+        if (!key || !editor) continue;
+        obj[key] = parseEditorValue(key, editor.value);
+      }
+      return obj;
+    }
+
+    function setKvFromJson(jsonStr) {
+      let obj;
+      try { obj = JSON.parse(jsonStr || '{}'); } catch { obj = {}; }
+      const tbody = document.getElementById('kv-rows');
+      tbody.innerHTML = '';
+      const keys = Object.keys(obj);
+      if (!keys.length) {
+        // Seed defaults
+        addKvRow({ key: 'goal', value: '' });
+        addKvRow({ key: 'success_criteria', value: [] });
+        addKvRow({ key: 'timeout_ms', value: 60000 });
+        return;
+      }
+      for (const k of keys) {
+        addKvRow({ key: k, value: obj[k] });
+      }
+    }
+
+    document.getElementById('add-row-btn').addEventListener('click', () => addKvRow());
+    // Seed three rows by default
+    setKvFromJson('');
+
+    const useJsonToggle = document.getElementById('use-json-toggle');
+    const jsonWrap = document.getElementById('json-editor-wrap');
+    const kvBuilder = document.getElementById('kv-builder');
+    useJsonToggle.addEventListener('change', () => {
+      const on = useJsonToggle.checked;
+      jsonWrap.style.display = on ? 'block' : 'none';
+      kvBuilder.style.display = on ? 'none' : 'block';
+    });
     const configForm = document.getElementById('config-form');
     const setupStatus = document.getElementById('setup-status');
     const configStatus = document.getElementById('config-status');
@@ -408,11 +560,13 @@
     }
 
     async function loadConfigs() {
-      const response = await fetch('/config');
+      const response = await fetch('/config.json');
       if (!response.ok) {
-        throw new Error('Unable to load configurations');
+        const text = await response.text().catch(() => '');
+        throw new Error(text || 'Unable to load configurations');
       }
-      const data = await response.json();
+      let data;
+      try { data = await response.json(); } catch { throw new Error('Server returned non-JSON response'); }
       renderConfigTable(data.configs || []);
     }
 
@@ -448,25 +602,33 @@
 
     async function submitConfig() {
       const id = document.getElementById('config-id').value;
+      // Build instructions from UI
+      let instructionsJson = '';
+      if (document.getElementById('use-json-toggle').checked) {
+        instructionsJson = document.getElementById('instructions').value.trim();
+      } else {
+        instructionsJson = JSON.stringify(collectKvAsObject());
+      }
+
       const payload = {
         id: id ? Number(id) : undefined,
         url_pattern: document.getElementById('url-pattern').value.trim(),
         name: document.getElementById('config-name').value.trim(),
         test_type: document.getElementById('test-type').value,
-        instructions: document.getElementById('instructions').value.trim(),
+        instructions: instructionsJson,
         is_active: document.getElementById('is-active').value === 'true'
       };
 
       let response;
       if (id) {
-        response = await fetch('/config', {
+        response = await fetch('/config.json', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
       } else {
         const { id, ...createPayload } = payload;
-        response = await fetch('/config', {
+        response = await fetch('/config.json', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(createPayload)
@@ -474,10 +636,12 @@
       }
 
       if (!response.ok) {
-        throw new Error(await response.text());
+        const text = await response.text().catch(() => '');
+        throw new Error(text || 'Request failed');
       }
 
-      const message = await response.json();
+      let message;
+      try { message = await response.json(); } catch { throw new Error('Invalid JSON from server'); }
       return message.message || (id ? 'Configuration updated' : 'Configuration created');
     }
 
@@ -489,7 +653,9 @@
       document.getElementById('url-pattern').value = config.url_pattern;
       document.getElementById('config-name').value = config.name;
       document.getElementById('test-type').value = config.test_type;
-      document.getElementById('instructions').value = tryFormatJson(config.instructions);
+      const raw = tryFormatJson(config.instructions);
+      document.getElementById('instructions').value = raw;
+      setKvFromJson(raw);
       document.getElementById('is-active').value = String(config.is_active !== false);
       document.getElementById('submit-config-btn').textContent = 'Update configuration';
       configStatus.style.display = 'none';

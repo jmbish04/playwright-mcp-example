@@ -64,6 +64,31 @@ export default {
           }
           return errorResponse('Method not allowed', 405);
 
+        case '/config':
+          // Serve SPA page under /config.html on GET/HEAD, otherwise REST under /config API
+          if (request.method === 'GET' || request.method === 'HEAD') {
+            return await serveAsset(env, request, '/config.html');
+          }
+          return await handleConfigEndpoint(request, db);
+
+        case '/config.html':
+          if (request.method === 'GET' || request.method === 'HEAD') {
+            return await serveAsset(env, request, '/config.html');
+          }
+          return errorResponse('Method not allowed', 405);
+
+        case '/tests.html':
+          if (request.method === 'GET' || request.method === 'HEAD') {
+            return await serveAsset(env, request, '/tests.html');
+          }
+          return errorResponse('Method not allowed', 405);
+
+        case '/sessions.html':
+          if (request.method === 'GET' || request.method === 'HEAD') {
+            return await serveAsset(env, request, '/sessions.html');
+          }
+          return errorResponse('Method not allowed', 405);
+
         case '/openapi.json':
           if (request.method === 'GET' || request.method === 'HEAD') {
             return await serveAsset(env, request, '/openapi.json');
@@ -77,8 +102,8 @@ export default {
         case '/mcp':
           return PlaywrightMCP.serve('/mcp').fetch(request, env, ctx);
 
-        // Configuration Management Endpoints
-        case '/config':
+        // Configuration Management Endpoints (JSON only)
+        case '/config.json':
           return await handleConfigEndpoint(request, db);
           
         case '/config/list':
