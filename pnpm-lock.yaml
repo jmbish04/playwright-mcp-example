@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@cloudflare/playwright':
+        specifier: ^1.0.0
+        version: 1.0.0
       '@cloudflare/playwright-mcp':
         specifier: ^0.0.5
         version: 0.0.5(@cloudflare/workers-types@4.20251004.0)(react@19.2.0)(zod@3.25.76)
@@ -68,6 +71,9 @@ packages:
 
   '@cloudflare/playwright@0.0.11':
     resolution: {integrity: sha512-5meAHlST5K3MKYA7TyL6Ns1XQhYB615qYZxDSn0UnSX14MFgRe+pqlq482dXbgMBappnvvsjZl+Ea3/FQcdbvQ==}
+
+  '@cloudflare/playwright@1.0.0':
+    resolution: {integrity: sha512-Z5LFFPJl1HxiI5+qJr+C3eoP8Lt5cv1xFesAWQG4ywL/Szx3b6S6ovJgOrPPZuZ6K9P5AFyqYEqFT3GjfVm/yA==}
 
   '@cloudflare/unenv-preset@2.7.6':
     resolution: {integrity: sha512-ykG2nd3trk6jbknRCH69xL3RpGLLbKCrbTbWSOvKEq7s4jH06yLrQlRr/q9IU+dK9p1JY1EXqhFK7VG5KqhzmQ==}
@@ -1074,6 +1080,8 @@ snapshots:
       - zod
 
   '@cloudflare/playwright@0.0.11': {}
+
+  '@cloudflare/playwright@1.0.0': {}
 
   '@cloudflare/unenv-preset@2.7.6(unenv@2.0.0-rc.21)(workerd@1.20251001.0)':
     dependencies:
