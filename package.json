@@ -15,6 +15,7 @@
     "build": "wrangler types && tsc",
     "generate-types": "wrangler types",
     "deploy": "npm run db:migrate && wrangler deploy",
+    "commit:gh": "git add -A && git commit -m \"chore: routine update\" && git push",
     "test": "./test.sh",
     "dev": "wrangler dev --local",
     "db:create": "wrangler d1 create playwright-test-db",
