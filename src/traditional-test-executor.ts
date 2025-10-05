@@ -3,7 +3,7 @@ import type {
   TestStep,
   TestAssertion,
   TestExecutionResult,
-  PlaywrightMcpAgent
+  PlaywrightAutomationClient
 } from './types';
 import { Logger } from './logger';
 import { DatabaseService } from './database';
@@ -11,9 +11,9 @@ import { DatabaseService } from './database';
 export class TraditionalTestExecutor {
   private logger: Logger;
   private db: DatabaseService;
-  private playwright: PlaywrightMcpAgent;
+  private playwright: PlaywrightAutomationClient;
 
-  constructor(playwright: PlaywrightMcpAgent, db: DatabaseService, logger: Logger) {
+  constructor(playwright: PlaywrightAutomationClient, db: DatabaseService, logger: Logger) {
     this.playwright = playwright;
     this.db = db;
     this.logger = logger;
@@ -90,7 +90,7 @@ export class TraditionalTestExecutor {
     } catch (error) {
       const executionTime = Date.now() - startTime;
       await this.logger.logTestEnd(testCase.name, 'failed', executionTime);
-      
+
       return {
         session_id: sessionId,
         success: false,
@@ -100,6 +100,8 @@ export class TraditionalTestExecutor {
         error_summary: error instanceof Error ? error.message : String(error),
         execution_time_ms: executionTime
       };
+    } finally {
+      await this.playwright.dispose();
     }
   }
 
