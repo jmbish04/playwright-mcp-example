@@ -22,7 +22,7 @@ new_sqlite_classes = ["PlaywrightMCP"]
 name = "MCP_OBJECT"
 class_name = "PlaywrightMCP"
 
-[[unsafe.bindings]]
-name = "ASSETS"
-type = "assets"
-path = "./public"
+[assets]
+directory = "./public"        # or "./dist/client" for Vite builds
+binding = "ASSETS"             # Optional: enables env.ASSETS.fetch()
+not_found_handling = "single-page-application"
