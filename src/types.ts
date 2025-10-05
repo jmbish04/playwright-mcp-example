@@ -1,3 +1,18 @@
+interface McpAgentFetcher {
+  fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response>;
+}
+
+export interface PlaywrightMcpAgent {
+  serve(path: string): McpAgentFetcher;
+  serveSSE(path: string): McpAgentFetcher;
+  navigate(url: string): Promise<unknown>;
+  click(selector: string): Promise<unknown>;
+  type(selector: string, text: string): Promise<unknown>;
+  selectOption(selector: string, value: string): Promise<unknown>;
+  takeScreenshot(): Promise<string>;
+  snapshot(): Promise<string>;
+}
+
 export interface SystemInstruction {
   id?: number;
   url_pattern: string;

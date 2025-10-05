@@ -1,13 +1,19 @@
-import { TraditionalTestCase, TestStep, TestAssertion, TestExecutionResult } from './types';
+import type {
+  TraditionalTestCase,
+  TestStep,
+  TestAssertion,
+  TestExecutionResult,
+  PlaywrightMcpAgent
+} from './types';
 import { Logger } from './logger';
 import { DatabaseService } from './database';
 
 export class TraditionalTestExecutor {
   private logger: Logger;
   private db: DatabaseService;
-  private playwright: any;
+  private playwright: PlaywrightMcpAgent;
 
-  constructor(playwright: any, db: DatabaseService, logger: Logger) {
+  constructor(playwright: PlaywrightMcpAgent, db: DatabaseService, logger: Logger) {
     this.playwright = playwright;
     this.db = db;
     this.logger = logger;
