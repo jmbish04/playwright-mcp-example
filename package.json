@@ -18,8 +18,8 @@
     "commit:gh": "git add -A && git commit -m \"chore: routine update\" ; git push origin HEAD:main",
     "test": "./test.sh",
     "dev": "wrangler dev --local",
-    "db:create": "wrangler d1 create playwright-test-db",
-    "db:migrate": "wrangler d1 migrations apply playwright-test-db"
+    "db:create": "wrangler d1 create DB",
+    "db:migrate": "wrangler d1 migrations apply DB --remote"
   },
   "dependencies": {
     "@cloudflare/playwright-mcp": "^0.0.5"
