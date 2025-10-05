@@ -339,7 +339,7 @@
         const statusClass = `pill ${session.status}`;
         return `
           <tr data-session="${session.id}">
-            <td><code>${session.id}</code></td>
+            <td><code>${escapeHtml(session.id)}</code></td>
             <td>${escapeHtml(truncate(session.url, 48))}</td>
             <td>${session.test_type}</td>
             <td><span class="${statusClass}">${session.status}</span></td>
