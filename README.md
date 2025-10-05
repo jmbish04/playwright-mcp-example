@@ -2,6 +2,8 @@
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/playwright-mcp/tree/main/cloudflare/example)
 
+> Maintenance: Triggering a rebuild in Workers Builds.
+
 ### Overview
 
 This project is a comprehensive testing utility worker that uses [Playwright with Cloudflare Workers](https://github.com/cloudflare/playwright) as both a Model Control Protocol (MCP) server and a standalone testing platform.
