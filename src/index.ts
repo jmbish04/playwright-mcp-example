@@ -465,18 +465,11 @@ async function serveAsset(env: Env, request: Request, assetPath?: string): Promi
     return new Response('Not Found', { status: 404 });
   }
 
-  const url = new URL(request.url);
-
   if (assetPath) {
+    const url = new URL(request.url);
     url.pathname = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+    return env.ASSETS.fetch(new Request(url.toString(), request));
   }
 
-  const assetRequest = assetPath ? new Request(url.toString(), request) : request;
-  const response = await env.ASSETS.fetch(assetRequest);
-
-  if (response.status === 404 && assetPath && !assetPath.endsWith('/index.html')) {
-    return serveAsset(env, request, '/index.html');
-  }
-
-  return response;
+  return env.ASSETS.fetch(request);
 }
