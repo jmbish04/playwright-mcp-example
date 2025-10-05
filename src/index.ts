@@ -4,9 +4,10 @@ import { DatabaseService } from './database';
 import { Logger } from './logger';
 import { TraditionalTestExecutor } from './traditional-test-executor';
 import { AgenticTestExecutor } from './agentic-test-executor';
+import type { PlaywrightMcpAgent } from './types';
 import { SystemInstruction, TraditionalTestCase, AgenticTestConfig } from './types';
 
-export const PlaywrightMCP = createMcpAgent(env.BROWSER);
+export const PlaywrightMCP = createMcpAgent(env.BROWSER) as PlaywrightMcpAgent;
 
 // Generate unique session ID
 function generateSessionId(): string {
@@ -51,6 +52,24 @@ export default {
 
     try {
       switch (pathname) {
+        case '/':
+          if (request.method === 'GET' || request.method === 'HEAD') {
+            return await serveAsset(env, request, '/index.html');
+          }
+          return errorResponse('Method not allowed', 405);
+
+        case '/docs':
+          if (request.method === 'GET' || request.method === 'HEAD') {
+            return await serveAsset(env, request, '/index.html');
+          }
+          return errorResponse('Method not allowed', 405);
+
+        case '/openapi.json':
+          if (request.method === 'GET' || request.method === 'HEAD') {
+            return await serveAsset(env, request, '/openapi.json');
+          }
+          return errorResponse('Method not allowed', 405);
+
         case '/sse':
         case '/sse/message':
           return PlaywrightMCP.serveSSE('/sse').fetch(request, env, ctx);
@@ -69,9 +88,30 @@ export default {
         case '/config/find':
           const url = searchParams.get('url');
           if (!url) return errorResponse('URL parameter is required');
-          
+
           const config = await db.getSystemInstructionByUrl(url);
           return successResponse({ config });
+
+        case '/admin/setup':
+          if (request.method !== 'POST') {
+            return errorResponse('Method not allowed', 405);
+          }
+
+          const setupResult = await db.ensureSchema();
+          const schemaAfterSetup = await db.getSchemaOverview();
+          return successResponse({
+            message: 'Database schema ensured',
+            ...setupResult,
+            schema: schemaAfterSetup.tables
+          });
+
+        case '/admin/schema':
+          if (request.method !== 'GET') {
+            return errorResponse('Method not allowed', 405);
+          }
+
+          const schema = await db.getSchemaOverview();
+          return successResponse(schema);
 
         // Traditional Testing Endpoints
         case '/test/traditional':
@@ -119,20 +159,20 @@ export default {
 
         // Health Check
         case '/health':
-          return successResponse({ 
-            status: 'healthy', 
+          return successResponse({
+            status: 'healthy',
             timestamp: new Date().toISOString(),
             version: '1.0.0'
           });
 
-        // API Documentation
-        case '/docs':
-        case '/':
-          return new Response(getApiDocumentation(), {
-            headers: { 'Content-Type': 'text/html' }
-          });
-
         default:
+          if ((request.method === 'GET' || request.method === 'HEAD') && 'ASSETS' in env && env.ASSETS) {
+            const assetResponse = await env.ASSETS.fetch(request);
+            if (assetResponse.status !== 404) {
+              return assetResponse;
+            }
+          }
+
           return errorResponse('Not Found', 404);
       }
     } catch (error) {
@@ -418,80 +458,23 @@ async function handleSessionEndpoint(request: Request, db: DatabaseService): Pro
   }
 }
 
-// API Documentation
-function getApiDocumentation(): string {
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Playwright Testing Utility Worker API</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .endpoint { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
-        .method { color: white; padding: 3px 8px; border-radius: 3px; font-weight: bold; }
-        .get { background: #4CAF50; }
-        .post { background: #2196F3; }
-        .put { background: #FF9800; }
-        .delete { background: #f44336; }
-        code { background: #f0f0f0; padding: 2px 4px; border-radius: 3px; }
-        pre { background: #f0f0f0; padding: 10px; border-radius: 5px; overflow-x: auto; }
-    </style>
-</head>
-<body>
-    <h1>Playwright Testing Utility Worker API</h1>
-    <p>A comprehensive testing utility for Cloudflare Workers with traditional and AI agentic testing capabilities.</p>
-    
-    <h2>Configuration Management</h2>
-    <div class="endpoint">
-        <span class="method get">GET</span> <code>/config</code> - List all configurations
-    </div>
-    <div class="endpoint">
-        <span class="method post">POST</span> <code>/config</code> - Create new configuration
-        <pre>{"url_pattern": "*.example.com", "name": "Example Test", "instructions": "{...}", "test_type": "traditional"}</pre>
-    </div>
-    <div class="endpoint">
-        <span class="method get">GET</span> <code>/config/find?url={url}</code> - Find configuration for URL
-    </div>
-    
-    <h2>Testing</h2>
-    <div class="endpoint">
-        <span class="method post">POST</span> <code>/test/traditional</code> - Execute traditional test
-        <pre>{"url": "https://example.com", "testCase": {...}, "useStoredConfig": true}</pre>
-    </div>
-    <div class="endpoint">
-        <span class="method post">POST</span> <code>/test/agentic</code> - Execute AI agentic test
-        <pre>{"url": "https://example.com", "config": {"goal": "...", "success_criteria": [...]}, "useStoredConfig": true}</pre>
-    </div>
-    
-    <h2>Session Management</h2>
-    <div class="endpoint">
-        <span class="method get">GET</span> <code>/session</code> - List all sessions
-    </div>
-    <div class="endpoint">
-        <span class="method get">GET</span> <code>/session?sessionId={id}</code> - Get session details
-    </div>
-    <div class="endpoint">
-        <span class="method get">GET</span> <code>/session/results?sessionId={id}</code> - Get session results and logs
-    </div>
-    
-    <h2>Analytics</h2>
-    <div class="endpoint">
-        <span class="method get">GET</span> <code>/analytics/stats?sessionId={id}</code> - Get session statistics
-    </div>
-    <div class="endpoint">
-        <span class="method post">POST</span> <code>/cleanup/old-sessions?days={days}</code> - Cleanup old sessions
-    </div>
-    
-    <h2>Utility</h2>
-    <div class="endpoint">
-        <span class="method get">GET</span> <code>/health</code> - Health check
-    </div>
-    <div class="endpoint">
-        <span class="method get">GET</span> <code>/mcp</code> - MCP endpoint for AI assistants
-    </div>
-    <div class="endpoint">
-        <span class="method get">GET</span> <code>/sse</code> - Server-sent events endpoint
-    </div>
-</body>
-</html>`;
+async function serveAsset(env: Env, request: Request, assetPath?: string): Promise<Response> {
+  if (!('ASSETS' in env) || !env.ASSETS) {
+    return new Response('Not Found', { status: 404 });
+  }
+
+  const url = new URL(request.url);
+
+  if (assetPath) {
+    url.pathname = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+  }
+
+  const assetRequest = assetPath ? new Request(url.toString(), request) : request;
+  const response = await env.ASSETS.fetch(assetRequest);
+
+  if (response.status === 404 && assetPath && !assetPath.endsWith('/index.html')) {
+    return serveAsset(env, request, '/index.html');
+  }
+
+  return response;
 }

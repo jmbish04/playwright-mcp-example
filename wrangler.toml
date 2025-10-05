@@ -3,6 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2025-03-10"
 compatibility_flags = ["nodejs_compat"]
 
+[observability]
+enabled = true
+
 [browser]
 binding = "BROWSER"
 
@@ -18,3 +21,8 @@ new_sqlite_classes = ["PlaywrightMCP"]
 [[durable_objects.bindings]]
 name = "MCP_OBJECT"
 class_name = "PlaywrightMCP"
+
+[[unsafe.bindings]]
+name = "ASSETS"
+type = "assets"
+path = "./public"

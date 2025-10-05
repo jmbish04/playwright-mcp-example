@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Run Tests · Playwright MCP</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, rgba(79, 70, 229, 0.25), transparent 60%),
+                  radial-gradient(circle at bottom right, rgba(20, 184, 166, 0.25), transparent 50%),
+                  #0b1120;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 2.5rem 1.5rem 1.5rem;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3rem);
+    }
+
+    header p {
+      margin: 1rem auto 0;
+      max-width: 720px;
+      line-height: 1.6;
+      color: rgba(226, 232, 240, 0.85);
+    }
+
+    main {
+      flex: 1;
+      padding: 0 1.5rem 4rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    a.back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: rgba(148, 163, 184, 0.9);
+      text-decoration: none;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+
+    section {
+      background: rgba(15, 23, 42, 0.82);
+      border-radius: 20px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      padding: 1.8rem;
+      box-shadow: 0 28px 60px rgba(15, 23, 42, 0.55);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    section h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    form {
+      display: grid;
+      gap: 1rem;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    input,
+    textarea,
+    select {
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(15, 23, 42, 0.65);
+      color: inherit;
+      padding: 0.75rem 1rem;
+      font: inherit;
+      transition: border 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: rgba(129, 140, 248, 0.9);
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.25);
+    }
+
+    textarea {
+      min-height: 180px;
+      resize: vertical;
+    }
+
+    .checkbox {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+      font-weight: 500;
+    }
+
+    button,
+    .button-link {
+      background: linear-gradient(135deg, #6366f1, #4338ca);
+      color: white;
+      border: none;
+      border-radius: 999px;
+      padding: 0.7rem 1.6rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      justify-content: center;
+      box-shadow: 0 16px 36px rgba(99, 102, 241, 0.35);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    button:hover,
+    button:focus,
+    .button-link:hover,
+    .button-link:focus {
+      transform: translateY(-2px);
+      box-shadow: 0 22px 40px rgba(99, 102, 241, 0.4);
+    }
+
+    .status {
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      background: rgba(59, 130, 246, 0.18);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      display: none;
+      white-space: pre-wrap;
+      font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .status.error {
+      background: rgba(185, 28, 28, 0.25);
+      border-color: rgba(248, 113, 113, 0.4);
+    }
+
+    code {
+      background: rgba(15, 23, 42, 0.85);
+      padding: 0.35rem 0.55rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem 1rem 3rem;
+      color: rgba(148, 163, 184, 0.75);
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 720px) {
+      section {
+        padding: 1.4rem;
+      }
+
+      button,
+      .button-link {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Launch MCP-Backed Tests</h1>
+    <p>Trigger traditional or agentic test executions. Each request synchronizes with the MCP toolset and logs rich telemetry into the shared D1 datastore.</p>
+  </header>
+
+  <main>
+    <a class="back-link" href="/">← Back to control center</a>
+
+    <div class="grid">
+      <section>
+        <h2>Traditional Test Runner</h2>
+        <p>Provide a structured test case or reuse an existing configuration bound to a URL pattern.</p>
+        <form id="traditional-form">
+          <label>
+            Target URL
+            <input id="traditional-url" type="url" placeholder="https://demo.playwright.dev/todomvc" required />
+          </label>
+          <label class="checkbox">
+            <input id="traditional-use-config" type="checkbox" checked />
+            Use stored configuration (if available)
+          </label>
+          <label>
+            Custom test case JSON
+            <textarea id="traditional-payload" placeholder='{ "name": "Login flow", "steps": [], "assertions": [] }'></textarea>
+          </label>
+          <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;">
+            <button type="submit">Execute traditional test</button>
+            <a class="button-link" href="/config.html">Manage configurations</a>
+          </div>
+          <div id="traditional-status" class="status"></div>
+        </form>
+      </section>
+
+      <section>
+        <h2>Agentic Test Runner</h2>
+        <p>Send high-level goals to the MCP agent to orchestrate autonomous Playwright explorations.</p>
+        <form id="agentic-form">
+          <label>
+            Target URL
+            <input id="agentic-url" type="url" placeholder="https://demo.playwright.dev/todomvc" required />
+          </label>
+          <label class="checkbox">
+            <input id="agentic-use-config" type="checkbox" checked />
+            Use stored agentic configuration (if available)
+          </label>
+          <label>
+            Agentic configuration JSON
+            <textarea id="agentic-payload" placeholder='{"goal":"Add 3 todos","context":"Starting from the home page","success_criteria":["3 todos created"],"max_attempts":2}'></textarea>
+          </label>
+          <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;">
+            <button type="submit">Execute agentic test</button>
+            <a class="button-link" href="/sessions.html">Monitor sessions</a>
+          </div>
+          <div id="agentic-status" class="status"></div>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <p>Results and logs are persisted to D1 and visible through both REST endpoints and the MCP interface.</p>
+  </footer>
+
+  <script>
+    const traditionalForm = document.getElementById('traditional-form');
+    const agenticForm = document.getElementById('agentic-form');
+    const traditionalStatus = document.getElementById('traditional-status');
+    const agenticStatus = document.getElementById('agentic-status');
+    const traditionalUseConfig = document.getElementById('traditional-use-config');
+    const agenticUseConfig = document.getElementById('agentic-use-config');
+    const traditionalPayload = document.getElementById('traditional-payload');
+    const agenticPayload = document.getElementById('agentic-payload');
+
+    traditionalUseConfig.addEventListener('change', () => togglePayload(traditionalUseConfig, traditionalPayload));
+    agenticUseConfig.addEventListener('change', () => togglePayload(agenticUseConfig, agenticPayload));
+    togglePayload(traditionalUseConfig, traditionalPayload);
+    togglePayload(agenticUseConfig, agenticPayload);
+
+    traditionalForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await runWithStatus(traditionalStatus, executeTraditional());
+    });
+
+    agenticForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await runWithStatus(agenticStatus, executeAgentic());
+    });
+
+    function togglePayload(toggle, field) {
+      field.disabled = toggle.checked;
+      field.placeholder = toggle.checked
+        ? 'Stored configuration will be applied if available.'
+        : field.placeholder;
+    }
+
+    async function executeTraditional() {
+      const payload = {
+        url: document.getElementById('traditional-url').value.trim(),
+        useStoredConfig: traditionalUseConfig.checked
+      };
+
+      if (!traditionalUseConfig.checked) {
+        payload.testCase = safeParseJson(traditionalPayload.value, 'Traditional test case must be valid JSON');
+      }
+
+      const response = await fetch('/test/traditional', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+      return formatTestResponse(data);
+    }
+
+    async function executeAgentic() {
+      const payload = {
+        url: document.getElementById('agentic-url').value.trim(),
+        useStoredConfig: agenticUseConfig.checked
+      };
+
+      if (!agenticUseConfig.checked) {
+        payload.config = safeParseJson(agenticPayload.value, 'Agentic config must be valid JSON');
+      }
+
+      const response = await fetch('/test/agentic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const data = await response.json();
+      return formatTestResponse(data);
+    }
+
+    function formatTestResponse(result) {
+      const summary = [
+        `Session: ${result.sessionId}`,
+        `Success: ${result.success ? '✅' : '❌'}`,
+        `Execution time: ${result.executionTime}ms`,
+        result.errorSummary ? `Error summary: ${result.errorSummary}` : null,
+        result.results ? `Results stored: ${Array.isArray(result.results) ? result.results.length : 'see session details'}` : null,
+        'Use the sessions dashboard to inspect logs, screenshots, and analytics.'
+      ].filter(Boolean).join('\n');
+
+      return summary;
+    }
+
+    async function runWithStatus(element, promise) {
+      element.style.display = 'block';
+      element.classList.remove('error');
+      element.textContent = 'Executing…';
+      try {
+        const message = await promise;
+        element.textContent = message;
+      } catch (error) {
+        element.classList.add('error');
+        element.textContent = error instanceof Error ? error.message : String(error);
+      }
+    }
+
+    function safeParseJson(value, errorMessage) {
+      try {
+        return JSON.parse(value);
+      } catch (error) {
+        throw new Error(errorMessage);
+      }
+    }
+  </script>
+</body>
+</html>
