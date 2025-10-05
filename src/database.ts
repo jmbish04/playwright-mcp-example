@@ -14,7 +14,7 @@ export class DatabaseService {
   }> {
     const beforeSetup = await this.listUserTables();
 
-    await this.db.exec(`
+    const schemaSql = `
       CREATE TABLE IF NOT EXISTS system_instructions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         url_pattern TEXT NOT NULL,
@@ -70,7 +70,16 @@ export class DatabaseService {
       CREATE INDEX IF NOT EXISTS idx_action_logs_timestamp ON action_logs(timestamp);
       CREATE INDEX IF NOT EXISTS idx_test_sessions_status ON test_sessions(status);
       CREATE INDEX IF NOT EXISTS idx_test_results_session_id ON test_results(session_id);
-    `);
+    `;
+
+    const statements = schemaSql
+      .split(';')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
+    for (const stmt of statements) {
+      await this.db.prepare(stmt).run();
+    }
 
     const afterSetup = await this.listUserTables();
     const createdTables = afterSetup.filter(table => !beforeSetup.includes(table));

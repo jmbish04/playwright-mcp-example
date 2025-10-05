@@ -17,6 +17,7 @@
     "deploy": "npm run db:migrate && wrangler deploy",
     "commit:gh": "git add -A && git commit -m \"chore: routine update\" ; git push origin HEAD:main",
     "test": "./test.sh",
+    "test:unit": "vitest run",
     "dev": "wrangler dev --local",
     "db:create": "wrangler d1 create DB",
     "db:migrate": "wrangler d1 migrations apply DB --remote"
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.1",
+    "vitest": "^2.1.4",
     "typescript": "^5.8.2",
     "wrangler": "^4.42.0"
   }
