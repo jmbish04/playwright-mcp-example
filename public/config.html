@@ -522,6 +522,8 @@
 
     async function ensureSchema() {
       const response = await fetch('/admin/setup', { method: 'POST' });
+      console.log('ensureSchema');
+      console.log(response);      
       if (!response.ok) {
         throw new Error(await response.text());
       }
@@ -531,6 +533,8 @@
 
     async function loadSchema() {
       const response = await fetch('/admin/schema');
+      console.log('loadSchema');
+      console.log(response);
       if (!response.ok) {
         throw new Error('Unable to load schema overview');
       }
