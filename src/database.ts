@@ -7,6 +7,149 @@ export class DatabaseService {
     this.db = db;
   }
 
+  // Database setup & schema introspection
+  async ensureSchema(): Promise<{
+    createdTables: string[];
+    existingTables: string[];
+  }> {
+    const beforeSetup = await this.listUserTables();
+
+    await this.db.exec(`
+      CREATE TABLE IF NOT EXISTS system_instructions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url_pattern TEXT NOT NULL,
+        name TEXT NOT NULL,
+        instructions TEXT NOT NULL,
+        test_type TEXT NOT NULL CHECK (test_type IN ('traditional', 'agentic')),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT TRUE
+      );
+
+      CREATE TABLE IF NOT EXISTS action_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        test_config_id INTEGER,
+        action_type TEXT NOT NULL,
+        action_data TEXT,
+        result TEXT,
+        error TEXT,
+        execution_time_ms INTEGER,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (test_config_id) REFERENCES system_instructions(id),
+        FOREIGN KEY (session_id) REFERENCES test_sessions(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS test_sessions (
+        id TEXT PRIMARY KEY,
+        url TEXT NOT NULL,
+        test_type TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'completed', 'failed', 'cancelled')),
+        config_id INTEGER,
+        start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+        end_time DATETIME,
+        results TEXT,
+        error_summary TEXT,
+        FOREIGN KEY (config_id) REFERENCES system_instructions(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS test_results (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        test_name TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('passed', 'failed', 'skipped')),
+        error_message TEXT,
+        screenshot_path TEXT,
+        execution_time_ms INTEGER,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (session_id) REFERENCES test_sessions(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_system_instructions_url_pattern ON system_instructions(url_pattern);
+      CREATE INDEX IF NOT EXISTS idx_action_logs_session_id ON action_logs(session_id);
+      CREATE INDEX IF NOT EXISTS idx_action_logs_timestamp ON action_logs(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_test_sessions_status ON test_sessions(status);
+      CREATE INDEX IF NOT EXISTS idx_test_results_session_id ON test_results(session_id);
+    `);
+
+    const afterSetup = await this.listUserTables();
+    const createdTables = afterSetup.filter(table => !beforeSetup.includes(table));
+
+    return {
+      createdTables,
+      existingTables: afterSetup
+    };
+  }
+
+  async getSchemaOverview(): Promise<{
+    tables: Array<{
+      name: string;
+      rowCount: number;
+      columns: Array<{
+        name: string;
+        type: string;
+        notNull: boolean;
+        defaultValue: string | null;
+        primaryKey: boolean;
+      }>;
+      indexes: Array<{
+        name: string;
+        unique: boolean;
+      }>;
+    }>;
+  }> {
+    const tables = await this.listUserTables();
+
+    const tablesWithSchema = await Promise.all(tables.map(async (table) => {
+      const safeName = this.validateIdentifier(table);
+
+      const columnsResult = await this.db.prepare(`PRAGMA table_info(${safeName})`).all();
+      const indexesResult = await this.db.prepare(`PRAGMA index_list(${safeName})`).all();
+      const rowCountResult = await this.db.prepare(`SELECT COUNT(*) as count FROM ${safeName}`).first();
+
+      const columns = (columnsResult.results as any[]).map(column => ({
+        name: column.name,
+        type: column.type,
+        notNull: column.notnull === 1,
+        defaultValue: column.dflt_value ?? null,
+        primaryKey: column.pk === 1
+      }));
+
+      const indexes = (indexesResult.results as any[]).map(index => ({
+        name: index.name,
+        unique: index.unique === 1
+      }));
+
+      const rowCount = (rowCountResult as any)?.count ?? 0;
+
+      return {
+        name: table,
+        rowCount,
+        columns,
+        indexes
+      };
+    }));
+
+    return {
+      tables: tablesWithSchema
+    };
+  }
+
+  private async listUserTables(): Promise<string[]> {
+    const results = await this.db.prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+    ).all();
+
+    return (results.results as Array<{ name: string }>).map(row => row.name);
+  }
+
+  private validateIdentifier(name: string): string {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+      throw new Error(`Invalid identifier: ${name}`);
+    }
+    return name;
+  }
+
   // System Instructions Management
   async createSystemInstruction(instruction: Omit<SystemInstruction, 'id' | 'created_at' | 'updated_at'>): Promise<number> {
     const result = await this.db.prepare(
