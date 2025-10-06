@@ -1,4 +1,4 @@
-import { SystemInstruction, ActionLog, TestSession, TestResult } from './types';
+import { SystemInstruction, ActionLog, TestSession, TestResult, UnitTestRunRecord } from './types';
 
 export class DatabaseService {
   private db: D1Database;
@@ -70,6 +70,27 @@ export class DatabaseService {
       CREATE INDEX IF NOT EXISTS idx_action_logs_timestamp ON action_logs(timestamp);
       CREATE INDEX IF NOT EXISTS idx_test_sessions_status ON test_sessions(status);
       CREATE INDEX IF NOT EXISTS idx_test_results_session_id ON test_results(session_id);
+
+      CREATE TABLE IF NOT EXISTS unit_test_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_id TEXT NOT NULL,
+        test_session_id TEXT,
+        test_result_id INTEGER,
+        test_id TEXT NOT NULL,
+        test_name TEXT NOT NULL,
+        test_code TEXT,
+        test_logs TEXT,
+        ai_response TEXT,
+        status TEXT NOT NULL CHECK (status IN ('PASS', 'FAIL')),
+        started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        finished_at DATETIME,
+        FOREIGN KEY (test_session_id) REFERENCES test_sessions(id),
+        FOREIGN KEY (test_result_id) REFERENCES test_results(id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_unit_test_runs_run_id ON unit_test_runs(run_id);
+      CREATE INDEX IF NOT EXISTS idx_unit_test_runs_status ON unit_test_runs(status);
+      CREATE INDEX IF NOT EXISTS idx_unit_test_runs_started_at ON unit_test_runs(started_at);
     `;
 
     const statements = schemaSql
@@ -337,10 +358,111 @@ export class DatabaseService {
 
   async cleanupOldSessions(daysOld = 30): Promise<number> {
     const result = await this.db.prepare(
-      `DELETE FROM test_sessions 
+      `DELETE FROM test_sessions
        WHERE start_time < datetime('now', '-' || ? || ' days')`
     ).bind(daysOld).run();
-    
+
     return result.meta.changes || 0;
+  }
+
+  // Unit test run management
+  async createUnitTestRow(row: Omit<UnitTestRunRecord, 'id'>): Promise<number> {
+    const result = await this.db.prepare(
+      `INSERT INTO unit_test_runs (
+        run_id, test_session_id, test_result_id, test_id, test_name,
+        test_code, test_logs, ai_response, status, started_at, finished_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?)`
+    ).bind(
+      row.run_id,
+      row.test_session_id ?? null,
+      row.test_result_id ?? null,
+      row.test_id,
+      row.test_name,
+      row.test_code ?? null,
+      row.test_logs ?? null,
+      row.ai_response ?? null,
+      row.status,
+      row.started_at ?? null,
+      row.finished_at ?? null
+    ).run();
+
+    return result.meta.last_row_id;
+  }
+
+  async completeUnitTestRow(id: number, updates: Partial<UnitTestRunRecord>): Promise<void> {
+    const fields = Object.keys(updates);
+    if (fields.length === 0) {
+      return;
+    }
+
+    const setClause = fields.map(field => `${field} = ?`).join(', ');
+    const values = fields.map(field => (updates as any)[field]);
+
+    await this.db.prepare(
+      `UPDATE unit_test_runs SET ${setClause} WHERE id = ?`
+    ).bind(...values, id).run();
+  }
+
+  async listUnitTestRuns(runId: string): Promise<UnitTestRunRecord[]> {
+    const results = await this.db.prepare(
+      `SELECT * FROM unit_test_runs WHERE run_id = ? ORDER BY started_at ASC, id ASC`
+    ).bind(runId).all();
+
+    return results.results as unknown as UnitTestRunRecord[];
+  }
+
+  async listRecentUnitRuns(limit = 10): Promise<Array<{
+    run_id: string;
+    started_at: string | null;
+    finished_at: string | null;
+    total: number;
+    passed: number;
+    failed: number;
+  }>> {
+    const results = await this.db.prepare(
+      `SELECT run_id,
+              MIN(started_at) AS started_at,
+              MAX(finished_at) AS finished_at,
+              COUNT(*) AS total,
+              SUM(CASE WHEN status = 'PASS' THEN 1 ELSE 0 END) AS passed,
+              SUM(CASE WHEN status = 'FAIL' THEN 1 ELSE 0 END) AS failed
+       FROM unit_test_runs
+       GROUP BY run_id
+       ORDER BY MAX(started_at) DESC
+       LIMIT ?`
+    ).bind(limit).all();
+
+    return results.results as unknown as Array<{
+      run_id: string;
+      started_at: string | null;
+      finished_at: string | null;
+      total: number;
+      passed: number;
+      failed: number;
+    }>;
+  }
+
+  async getLatestUnitRun(): Promise<{ run: { run_id: string; started_at: string | null; finished_at: string | null; stats: { total: number; passed: number; failed: number; }; }; rows: UnitTestRunRecord[] } | null> {
+    const recent = await this.listRecentUnitRuns(1);
+    if (recent.length === 0) {
+      return null;
+    }
+
+    const run = recent[0];
+    const rows = await this.listUnitTestRuns(run.run_id);
+
+    return {
+      run: {
+        run_id: run.run_id,
+        started_at: run.started_at,
+        finished_at: run.finished_at,
+        stats: {
+          total: run.total,
+          passed: run.passed,
+          failed: run.failed,
+        },
+      },
+      rows,
+    };
   }
 }

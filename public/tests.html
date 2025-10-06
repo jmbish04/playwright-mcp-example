@@ -62,6 +62,10 @@
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     }
 
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
     section {
       background: rgba(15, 23, 42, 0.82);
       border-radius: 20px;
@@ -164,6 +168,99 @@
       border-color: rgba(248, 113, 113, 0.4);
     }
 
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    th, td {
+      padding: 0.75rem 0.5rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    th {
+      font-weight: 600;
+      color: rgba(226, 232, 240, 0.85);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.2rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      background: rgba(59, 130, 246, 0.25);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+    }
+
+    .chip.pass {
+      background: rgba(34, 197, 94, 0.18);
+      border-color: rgba(34, 197, 94, 0.35);
+    }
+
+    .chip.fail {
+      background: rgba(248, 113, 113, 0.2);
+      border-color: rgba(248, 113, 113, 0.35);
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      z-index: 1000;
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 16px;
+      max-width: 720px;
+      width: 100%;
+      max-height: 80vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    .modal-body {
+      padding: 1.25rem;
+      overflow: auto;
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: rgba(15, 23, 42, 0.85);
+      border-radius: 12px;
+      padding: 1rem;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
     code {
       background: rgba(15, 23, 42, 0.85);
       padding: 0.35rem 0.55rem;
@@ -247,12 +344,50 @@
           <div id="agentic-status" class="status"></div>
         </form>
       </section>
+
+      <section class="full-width" id="unit-tests-panel">
+        <h2>Run Unit Tests</h2>
+        <p>Trigger the Vitest suite and stream results from recent runs. Results are persisted in D1 for historical analysis and AI annotations.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;">
+          <button id="unit-tests-run">Run All Unit Tests</button>
+          <span id="unit-tests-status" class="status" style="display:none; margin:0; min-width:260px;"></span>
+        </div>
+        <div id="unit-tests-summary" style="display:flex;gap:1rem;flex-wrap:wrap;font-size:0.95rem;color:rgba(226,232,240,0.8);"></div>
+        <div class="table-wrapper" style="overflow:auto;border-radius:12px;border:1px solid rgba(148,163,184,0.25);">
+          <table>
+            <thead>
+              <tr>
+                <th>Test name</th>
+                <th>Status</th>
+                <th>Logs</th>
+                <th>AI analysis</th>
+                <th>Code</th>
+              </tr>
+            </thead>
+            <tbody id="unit-tests-body">
+              <tr><td colspan="5" style="text-align:center;padding:1.5rem;color:rgba(148,163,184,0.75);">No unit test run selected.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   </main>
 
   <footer>
     <p>Results and logs are persisted to D1 and visible through both REST endpoints and the MCP interface.</p>
   </footer>
+
+  <div id="unit-tests-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="unit-modal-title" style="margin:0;font-size:1.2rem;"></h3>
+        <button id="unit-modal-close" type="button">Close</button>
+      </div>
+      <div class="modal-body">
+        <pre id="unit-modal-body">No data.</pre>
+      </div>
+    </div>
+  </div>
 
   <script>
     const traditionalForm = document.getElementById('traditional-form');
@@ -263,6 +398,17 @@
     const agenticUseConfig = document.getElementById('agentic-use-config');
     const traditionalPayload = document.getElementById('traditional-payload');
     const agenticPayload = document.getElementById('agentic-payload');
+
+    const unitTestsRunButton = document.getElementById('unit-tests-run');
+    const unitTestsStatus = document.getElementById('unit-tests-status');
+    const unitTestsSummary = document.getElementById('unit-tests-summary');
+    const unitTestsBody = document.getElementById('unit-tests-body');
+    const unitModal = document.getElementById('unit-tests-modal');
+    const unitModalTitle = document.getElementById('unit-modal-title');
+    const unitModalBody = document.getElementById('unit-modal-body');
+    const unitModalClose = document.getElementById('unit-modal-close');
+    let currentRunId = null;
+    let pollTimer = null;
 
     traditionalUseConfig.addEventListener('change', () => togglePayload(traditionalUseConfig, traditionalPayload));
     agenticUseConfig.addEventListener('change', () => togglePayload(agenticUseConfig, agenticPayload));
@@ -278,6 +424,46 @@
       event.preventDefault();
       await runWithStatus(agenticStatus, executeAgentic());
     });
+
+    unitTestsRunButton?.addEventListener('click', async () => {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+
+      try {
+        unitTestsRunButton.disabled = true;
+        unitTestsStatus.style.display = 'block';
+        unitTestsStatus.classList.remove('error');
+        unitTestsStatus.textContent = 'Initializing unit test run…';
+
+        const response = await fetch('/tests/run-unit', { method: 'POST' });
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        const data = await response.json();
+        currentRunId = data.run_id;
+        unitTestsStatus.textContent = `${data.message} (run: ${currentRunId})`;
+        await refreshUnitRuns();
+        pollTimer = window.setInterval(() => pollUnitRun(currentRunId), 2000);
+        await pollUnitRun(currentRunId);
+      } catch (error) {
+        unitTestsStatus.classList.add('error');
+        unitTestsStatus.textContent = error instanceof Error ? error.message : String(error);
+      } finally {
+        unitTestsRunButton.disabled = false;
+      }
+    });
+
+    unitModalClose?.addEventListener('click', () => closeModal());
+    unitModal?.addEventListener('click', (event) => {
+      if (event.target === unitModal) {
+        closeModal();
+      }
+    });
+
+    loadLatestUnitRun();
 
     function togglePayload(toggle, field) {
       field.disabled = toggle.checked;
@@ -367,6 +553,120 @@
         throw new Error(errorMessage);
       }
     }
+
+    async function pollUnitRun(runId) {
+      if (!runId) return;
+      try {
+        const response = await fetch(`/tests/unit-results?run_id=${encodeURIComponent(runId)}`);
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        const data = await response.json();
+        renderUnitResults(data.results);
+        renderUnitSummary(data.stats, runId, data.completed);
+
+        if (data.completed && pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+          await refreshUnitRuns();
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    async function loadLatestUnitRun() {
+      try {
+        const response = await fetch('/tests/unit-latest');
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data?.run?.run_id) {
+          renderUnitSummary(data.run.stats, data.run.run_id, data.rows.every(r => r.finished_at));
+          renderUnitResults(data.rows);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    async function refreshUnitRuns() {
+      try {
+        const response = await fetch('/tests/unit-runs');
+        if (!response.ok) return;
+        const data = await response.json();
+        if (Array.isArray(data.runs) && data.runs.length > 0) {
+          const [latest] = data.runs;
+          renderUnitSummary({ total: latest.total, passed: latest.passed, failed: latest.failed }, latest.run_id, Boolean(latest.finished_at));
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    function renderUnitResults(results = []) {
+      if (!Array.isArray(results) || results.length === 0) {
+        unitTestsBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:rgba(148,163,184,0.75);">No unit test results yet.</td></tr>';
+        return;
+      }
+
+      unitTestsBody.innerHTML = '';
+      results.forEach((row) => {
+        const tr = document.createElement('tr');
+        const status = row.status === 'PASS' ? 'pass' : 'fail';
+        tr.innerHTML = `
+          <td>${escapeHtml(row.test_name || row.test_id)}</td>
+          <td><span class="chip ${status}">${status === 'pass' ? '✅ Pass' : '❌ Fail'}</span></td>
+          <td><button type="button" data-kind="logs" data-title="Logs for ${escapeHtml(row.test_name || row.test_id)}" data-content="${encodeURIComponent(row.test_logs || 'No logs captured.')}">View logs</button></td>
+          <td><button type="button" data-kind="ai" data-title="AI analysis for ${escapeHtml(row.test_name || row.test_id)}" data-content="${encodeURIComponent(row.ai_response || 'AI analysis unavailable.')}">View AI analysis</button></td>
+          <td><button type="button" data-kind="code" data-title="Test code for ${escapeHtml(row.test_name || row.test_id)}" data-content="${encodeURIComponent(row.test_code || 'Code not provided.')}">View code</button></td>
+        `;
+        unitTestsBody.appendChild(tr);
+      });
+
+      unitTestsBody.querySelectorAll('button[data-kind]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const title = button.getAttribute('data-title') || 'Details';
+          const content = decodeURIComponent(button.getAttribute('data-content') || '');
+          openModal(title, content);
+        });
+      });
+    }
+
+    function renderUnitSummary(stats, runId, completed) {
+      if (!stats) return;
+      unitTestsSummary.innerHTML = '';
+      const statusChip = document.createElement('div');
+      statusChip.className = `chip ${completed ? 'pass' : ''}`;
+      statusChip.textContent = completed ? 'Completed' : 'In progress';
+      unitTestsSummary.appendChild(statusChip);
+
+      const summaryText = document.createElement('div');
+      summaryText.innerHTML = `<strong>Run:</strong> ${escapeHtml(runId || 'n/a')} · <strong>Total:</strong> ${stats.total || 0} · <strong>Passed:</strong> ${stats.passed || 0} · <strong>Failed:</strong> ${stats.failed || 0}`;
+      unitTestsSummary.appendChild(summaryText);
+    }
+
+    function openModal(title, content) {
+      if (!unitModal || !unitModalTitle || !unitModalBody) return;
+      unitModalTitle.textContent = title;
+      unitModalBody.textContent = content;
+      unitModal.classList.add('open');
+    }
+
+    function closeModal() {
+      if (!unitModal) return;
+      unitModal.classList.remove('open');
+    }
+
+    function escapeHtml(value = '') {
+      return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
   </script>
+
 </body>
 </html>

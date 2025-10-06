@@ -54,6 +54,21 @@ export interface TestResult {
   timestamp?: string;
 }
 
+export interface UnitTestRunRecord {
+  id?: number;
+  run_id: string;
+  test_session_id?: string | null;
+  test_result_id?: number | null;
+  test_id: string;
+  test_name: string;
+  test_code?: string | null;
+  test_logs?: string | null;
+  ai_response?: string | null;
+  status: 'PASS' | 'FAIL';
+  started_at?: string;
+  finished_at?: string | null;
+}
+
 export interface TraditionalTestCase {
   name: string;
   steps: TestStep[];

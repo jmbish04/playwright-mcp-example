@@ -14,6 +14,10 @@ function generateSessionId(): string {
   return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+function generateRunId(): string {
+  return `unit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
 // URL pattern matching helper
 function findBestMatchingConfig(url: string, configs: SystemInstruction[]): SystemInstruction | null {
   const matches = configs.filter(config => {
@@ -83,6 +87,30 @@ export default {
           }
           return errorResponse('Method not allowed', 405);
 
+        case '/tests/run-unit':
+          return await handleRunUnitTests(request, env, db);
+
+        case '/tests/unit-results':
+          if (request.method === 'GET') {
+            return await handleGetUnitResults(request, db);
+          }
+          return errorResponse('Method not allowed', 405);
+
+        case '/tests/unit-results/import':
+          return await handleImportUnitResults(request, env, db);
+
+        case '/tests/unit-latest':
+          if (request.method === 'GET') {
+            return await handleGetLatestUnitRun(db);
+          }
+          return errorResponse('Method not allowed', 405);
+
+        case '/tests/unit-runs':
+          if (request.method === 'GET') {
+            return await handleListUnitRuns(request, db);
+          }
+          return errorResponse('Method not allowed', 405);
+
         case '/sessions.html':
           if (request.method === 'GET' || request.method === 'HEAD') {
             return await serveAsset(env, request, '/sessions.html');
@@ -138,6 +166,18 @@ export default {
           const schema = await db.getSchemaOverview();
           return successResponse(schema);
 
+        case '/admin/diag':
+          if (request.method !== 'GET') {
+            return errorResponse('Method not allowed', 405);
+          }
+
+          const diagSchema = await db.getSchemaOverview();
+          return successResponse({
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            tables: diagSchema.tables.length,
+          });
+
         // Traditional Testing Endpoints
         case '/test/traditional':
           return await handleTraditionalTest(request, env, db);
@@ -184,6 +224,15 @@ export default {
 
         // Health Check
         case '/health':
+          try {
+            await db.getSchemaOverview();
+          } catch (error) {
+            return errorResponse(
+              error instanceof Error ? `Database check failed: ${error.message}` : 'Database check failed',
+              503
+            );
+          }
+
           return successResponse({
             status: 'healthy',
             timestamp: new Date().toISOString(),
@@ -497,4 +546,179 @@ async function serveAsset(env: Env, request: Request, assetPath?: string): Promi
   }
 
   return env.ASSETS.fetch(request);
+}
+
+async function handleRunUnitTests(request: Request, env: Env, db: DatabaseService): Promise<Response> {
+  if (request.method !== 'POST') {
+    return errorResponse('Method not allowed', 405);
+  }
+
+  const runId = generateRunId();
+  const isNodeRuntime = typeof (globalThis as any).process !== 'undefined';
+  const message = isNodeRuntime
+    ? `Run unit tests locally with \`pnpm ts-node scripts/run-vitest.ts --run-id ${runId}\` and upload the generated results file.`
+    : 'CI should execute Vitest and POST the JSON results to /tests/unit-results/import.';
+
+  await db.createUnitTestRow({
+    run_id: runId,
+    test_id: 'run-initialized',
+    test_name: 'Unit test run initialized',
+    status: 'PASS',
+    test_logs: message,
+    test_code: null,
+    ai_response: 'Run initialization recorded.',
+    started_at: new Date().toISOString(),
+    finished_at: new Date().toISOString(),
+  });
+
+  return successResponse({
+    run_id: runId,
+    mode: isNodeRuntime ? 'local' : 'remote',
+    message,
+  }, 201);
+}
+
+async function handleImportUnitResults(request: Request, env: Env, db: DatabaseService): Promise<Response> {
+  if (request.method !== 'POST') {
+    return errorResponse('Method not allowed', 405);
+  }
+
+  let payload: any;
+  try {
+    payload = await request.json();
+  } catch (error) {
+    return errorResponse('Invalid JSON payload');
+  }
+
+  if (!payload || typeof payload.run_id !== 'string') {
+    return errorResponse('run_id is required');
+  }
+
+  if (!Array.isArray(payload.results)) {
+    return errorResponse('results array is required');
+  }
+
+  const runId: string = payload.run_id;
+  const summary = { total: 0, passed: 0, failed: 0 };
+  const processed: Array<{ id: number; test_id: string; status: 'PASS' | 'FAIL'; ai_response: string }>
+    = [];
+
+  for (const result of payload.results) {
+    if (!result || typeof result.test_id !== 'string' || typeof result.test_name !== 'string') {
+      return errorResponse('Each result requires test_id and test_name');
+    }
+
+    const status = result.status === 'PASS' ? 'PASS' : result.status === 'FAIL' ? 'FAIL' : null;
+    if (!status) {
+      return errorResponse('status must be PASS or FAIL');
+    }
+
+    const startedAt = new Date().toISOString();
+    const rowId = await db.createUnitTestRow({
+      run_id: runId,
+      test_session_id: result.test_session_id ?? null,
+      test_result_id: result.test_result_id ?? null,
+      test_id: result.test_id,
+      test_name: result.test_name,
+      test_code: result.test_code ?? null,
+      test_logs: result.test_logs ?? null,
+      status,
+      ai_response: null,
+      started_at: startedAt,
+      finished_at: null,
+    });
+
+    const ai_response = await analyzeUnitTestResult(env, {
+      testName: result.test_name,
+      status,
+      logs: result.test_logs ?? '',
+      code: result.test_code ?? '',
+    });
+
+    await db.completeUnitTestRow(rowId, {
+      ai_response,
+      finished_at: new Date().toISOString(),
+    });
+
+    summary.total += 1;
+    if (status === 'PASS') summary.passed += 1; else summary.failed += 1;
+    processed.push({ id: rowId, test_id: result.test_id, status, ai_response });
+  }
+
+  return successResponse({
+    run_id: runId,
+    stats: summary,
+    processed,
+  });
+}
+
+async function handleGetUnitResults(request: Request, db: DatabaseService): Promise<Response> {
+  const { searchParams } = new URL(request.url);
+  const runId = searchParams.get('run_id');
+  if (!runId) {
+    return errorResponse('run_id parameter is required');
+  }
+
+  const rows = await db.listUnitTestRuns(runId);
+  const stats = rows.reduce((acc, row) => {
+    acc.total += 1;
+    if (row.status === 'PASS') acc.passed += 1; else acc.failed += 1;
+    return acc;
+  }, { total: 0, passed: 0, failed: 0 });
+  const completed = rows.length > 0 && rows.every(row => !!row.finished_at);
+
+  return successResponse({
+    run_id: runId,
+    results: rows,
+    stats,
+    completed,
+  });
+}
+
+async function handleGetLatestUnitRun(db: DatabaseService): Promise<Response> {
+  const latest = await db.getLatestUnitRun();
+  if (!latest) {
+    return successResponse({ run: null, rows: [] });
+  }
+
+  return successResponse(latest);
+}
+
+async function handleListUnitRuns(request: Request, db: DatabaseService): Promise<Response> {
+  const { searchParams } = new URL(request.url);
+  const limitParam = searchParams.get('limit');
+  const limit = limitParam ? Math.min(50, Math.max(1, Number(limitParam) || 10)) : 10;
+  const runs = await db.listRecentUnitRuns(limit);
+  return successResponse({ runs });
+}
+
+async function analyzeUnitTestResult(env: Env, details: { testName: string; status: 'PASS' | 'FAIL'; logs: string; code: string; }): Promise<string> {
+  if (!('AI' in env) || !env.AI || typeof (env as any).AI?.run !== 'function') {
+    return 'AI not configured';
+  }
+
+  const model = '@cf/meta/llama-3.1-8b-instruct';
+  const prompt = `You are analyzing a Vitest unit test result.\nTest name: ${details.testName}\nOutcome: ${details.status}.\nTest code:\n${details.code || 'N/A'}\nLogs:\n${details.logs || 'No logs provided.'}\nSummarize what happened, explain any failures, and suggest fixes.`;
+
+  try {
+    const result = await (env as any).AI.run(model, {
+      messages: [
+        { role: 'system', content: 'You are an assistant that explains unit test outcomes clearly and concisely.' },
+        { role: 'user', content: prompt },
+      ],
+    });
+
+    if (!result) {
+      return 'No AI response returned.';
+    }
+
+    if (typeof result === 'string') {
+      return result;
+    }
+
+    const text = result.output_text || result.response || JSON.stringify(result);
+    return typeof text === 'string' && text.trim().length > 0 ? text : JSON.stringify(result);
+  } catch (error) {
+    return `AI analysis failed: ${error instanceof Error ? error.message : String(error)}`;
+  }
 }
